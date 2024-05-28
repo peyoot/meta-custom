@@ -22,6 +22,10 @@ inherit ${ROS_DISTRO_TYPE}_image
 #IMAGE_INSTALL:append = " \
 #    packagegroup-ros-world \
 #"
+GLIBC_GENERATE_LOCALES = "zh_CN.UTF-8 en_GB.UTF-8 en_US.UTF-8" 
+IMAGE_LINGUAS = "en-us"
+LOCALE_UTF8_ONLY="1"
+
 IMAGE_INSTALL:append = " \
     ros-core \
     packagegroup-ros2-demos \
