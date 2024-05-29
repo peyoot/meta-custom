@@ -15,4 +15,4 @@ if [ -d /etc/profile.d/ros/ ]; then
 fi
 
 
-
+export QMLSCENE_DEVICE=softwarecontext
