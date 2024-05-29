@@ -3,7 +3,7 @@
 SUMMARY = "dummy script systemd service"
 DESCRIPTION = "A systemd service to run or source script on system startup. you can ues it as reference. change it to your formal service name rather than dummy"
 LICENSE = "CLOSED"
-FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 RPROVIDES:${PN} += "${PN}"
 
 SRC_URI = "file://dummy.sh \
