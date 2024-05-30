@@ -15,8 +15,8 @@ do_install() {
         install -d ${D}/home/root
         # extra files need to go in the respective directories
         install -m 0644 ${WORKDIR}/.profile ${D}/home/root/
-        install -m 0644 ${WORKDIR}/myfile.txt ${D}/home/root/
+        install -m 0644 ${WORKDIR}/.profile ${D}/home/weston/
 }
 
-FILES:${PN} += "/home/root/* \
-        /home/root/.profile"
+FILES:${PN} += "/home/root/.profile \
+        /home/weston/.profile"

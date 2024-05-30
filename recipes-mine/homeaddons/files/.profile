@@ -14,5 +14,5 @@ if [ -d /etc/profile.d/ros/ ]; then
     fi
 fi
 
-
+export QT_QPA_PLATFORM="wayland"
 export QMLSCENE_DEVICE="softwarecontext"
