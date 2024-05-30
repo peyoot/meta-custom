@@ -1,0 +1,22 @@
+This is a ros2 demo image that can run on Digi ConnectCore 93 DVK.
+
+Visit https://peyoot.github.io/deyaio/ros2.html for more information.
+
+You can either lauch ROS turtlesim demo from console on host or lauch it from weston desktop.  
+
+A good practice is to use tmux to open 2 sessions. Here's the testing scenario:
+
+1. login with root or weston
+
+2. start a tmux session by command : tmux
+
+3. run turtlesim demo by command: ros2 run turtlesim turtlesim_node
+
+Now a turtle will appear on the desktop. To control it with keyboard, you'll need to run the following command:
+
+4. use CTRL+B+C to create another tmux session
+
+5. run command: ros2 run turtlesim turtle_teleop_key
+
+ 
+Now you can use the keyboard's arrow keys to control the little turtle forward or backward, as well as change direction.
