@@ -14,14 +14,14 @@ do_install() {
         # creating the destination directories
         install -d ${D}/home/root
         # extra files need to go in the respective directories
-        install -m 0644 ${WORKDIR}/.profile ${D}/home/root/
-        install -m 0644 ${WORKDIR}/about-demo.txt ${D}/home/root/
+        install -m 0644 ${WORKDIR}/.profile ${D}/root/
+        install -m 0644 ${WORKDIR}/about-demo.txt ${D}/root/
         install -m 0644 ${WORKDIR}/.profile ${D}/home/weston/
         install -m 0644 ${WORKDIR}/about-demo.txt ${D}/home/weston/
 
 }
 
-FILES:${PN} += "/home/root/.profile \
-        /home/root/about-demo.txt \
+FILES:${PN} += "/root/.profile \
+        /root/about-demo.txt \
         /home/weston/.profile \
         /home/weston/about-demo.txt"
