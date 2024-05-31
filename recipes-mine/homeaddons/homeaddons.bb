@@ -5,7 +5,7 @@ LICENSE = "CLOSED"
 FILESEXTRAPATHS:prepend := "${THISDIR}/files:" 
 RPROVIDES:${PN} += "${PN}" 
 SRC_URI = "file://.profile \
-        file://myfile.txt"
+        file://about-demo.txt"
 # Specify where to get the files
 S = "${WORKDIR}" 
 do_configure[noexec] = "1" 
