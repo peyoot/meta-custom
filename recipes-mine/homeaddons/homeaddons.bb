@@ -12,7 +12,7 @@ do_configure[noexec] = "1"
 do_compile[noexec] = "1" 
 do_install() {
         # creating the destination directories
-        install -d ${D}/home/root
+        install -d ${D}/root
         # extra files need to go in the respective directories
         install -m 0644 ${WORKDIR}/.profile ${D}/root/
         install -m 0644 ${WORKDIR}/about-demo.txt ${D}/root/
