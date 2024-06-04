@@ -24,5 +24,6 @@ do_install() {
 
 FILES:${PN} += "/root/.profile \
         /root/about-demo.txt"
- #       /home/weston/.profile \
- #       /home/weston/about-demo.txt"
+
+#       /home/weston/.profile \
+#       /home/weston/about-demo.txt"
