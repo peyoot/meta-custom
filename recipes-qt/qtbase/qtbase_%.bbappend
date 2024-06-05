@@ -13,5 +13,5 @@ do_install:append() {
 
 
 #FILES:${PN} += "${sysconfdir}/profile.d/qt5.sh" remote this and use prepend to make sure override 
-FILES:prepend = "${sysconfdir}/profile.d/qt5.sh"
+FILES:append = "${sysconfdir}/profile.d/qt5.sh"
 
