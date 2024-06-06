@@ -2,14 +2,13 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI:append = " \
-    file://rosqt5.sh \
+    file://qt5.sh \
 "
 
 do_install:append() {
 
-    rm -f ${D}${sysconfdir}/profile.d/qt5.sh
     install -d ${D}${sysconfdir}/profile.d/
-    install -m 0755 ${WORKDIR}/rosqt5.sh ${D}${sysconfdir}/profile.d/qt5.sh
+    install -m 0755 ${WORKDIR}/qt5.sh ${D}${sysconfdir}/profile.d/qt5.sh
 }
 
 
