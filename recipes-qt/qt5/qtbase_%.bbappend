@@ -1,6 +1,6 @@
 # meta-custom/recipes-qt/qt5/qtbase_%.bbappend  
   
-do_install_append() {  
+do_install:append() {  
     local custom_script="${THISDIR}/qtbase/rosqt5.sh"  
     if [ -f "${custom_script}" ]; then  
         rm -f ${D}${sysconfdir}/profile.d/qt5.sh  
