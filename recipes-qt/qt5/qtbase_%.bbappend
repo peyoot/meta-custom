@@ -1,17 +1,18 @@
 # meta-custom/recipes-qt/qt5/qtbase_%.bbappend  
-  
-do_install:append() {  
-    local custom_script="${THISDIR}/qtbase/rosqt5.sh"  
-    if [ -f "${custom_script}" ]; then  
-        rm -f ${D}${sysconfdir}/profile.d/qt5.sh  
-  
-        install -m 0755 "${custom_script}" ${D}${sysconfdir}/profile.d/qt5.sh  
-    else  
-        bberror "Custom script ${custom_script} not found!"  
-        return 1  
-    fi  
-}  
-  
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
+
+SRC_URI:append = " \
+    file://rosqt5.sh \
+"
+
+do_install:append() {
+
+    rm -f ${D}${sysconfdir}/profile.d/qt5.sh
+    install -d ${D}${sysconfdir}/profile.d/
+    install -m 0755 ${WORKDIR}/rosqt5.sh ${D}${sysconfdir}/profile.d/qt5.sh
+}
+
+
 FILES:${PN} += "${sysconfdir}/profile.d/qt5.sh"
 
 
