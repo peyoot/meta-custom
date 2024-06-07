@@ -5,6 +5,12 @@ SRC_URI:append = " \
     file://qt5.sh \
 "
 
+# delete meta-digi qt5.sh first
+do_install:prepend() { 
+
+  rm -f ${D}${sysconfdir}/profile.d/qt5.sh
+}
+
 do_install:append() {
 
     install -d ${D}${sysconfdir}/profile.d/
