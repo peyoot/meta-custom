@@ -17,7 +17,7 @@ export QMLSCENE_DEVICE="softwarecontext"
 
 export QT_QPA_PLATFORM="wayland"
 
-[ -f "/etc/profile.d/weston.sh" ] || [ -f "/etc/profile.d/weston-socket.sh" ] && return
+[ -n "$(find /etc/profile.d -maxdepth 1 -type f -name 'weston*.sh')" ] && return
 
 
 export QT_QPA_PLATFORM="xcb"
