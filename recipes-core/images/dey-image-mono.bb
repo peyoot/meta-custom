@@ -8,7 +8,7 @@ DESCRIPTION = "DEY image with dotnet support"
 GRAPHICAL_CORE = "mono"
 
 require recipes-sato/images/core-image-sato.bb
-require core-image-mono.inc
+require recipes-mono/images/core-image-mono.inc
 
 GLIBC_GENERATE_LOCALES = "zh_CN.UTF-8 en_GB.UTF-8 en_US.UTF-8" 
 IMAGE_LINGUAS = "en-us"
