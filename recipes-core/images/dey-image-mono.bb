@@ -10,11 +10,10 @@ GRAPHICAL_CORE = "mono"
 require recipes-sato/images/core-image-sato.bb
 require recipes-mono/images/core-image-mono.inc
 
-CORE_IMAGE_EXTRA_INSTALL += " \
-    ${@bb.utils.contains('IMAGE_FEATURES', 'dey-mono', ' msbuild dotnet dotnet-helloworld python3-pythonnet', '', d)} \
-"
-
 GLIBC_GENERATE_LOCALES = "zh_CN.UTF-8 en_GB.UTF-8 en_US.UTF-8" 
 IMAGE_LINGUAS = "en-us"
 LOCALE_UTF8_ONLY="1"
 
+FEATURE_PACKAGES_dey-mono = "packagegroup-dey-mono"
+
+IMAGE_INSTALL:append = " ${FEATURE_PACKAGES_dey-mono}"
