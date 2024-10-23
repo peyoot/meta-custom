@@ -2,13 +2,13 @@
 
 # add custom install script 
 SRC_URI += " \
-    file://${THISDIR}/u-boot-dey/ccmp2/install_custom_fw_sd.txt \
+    file://${THISDIR}/u-boot-dey/ccmp2/install_plc_fw_sd.txt \
 "
 
 # make sure it has been built in  do_deploy 
 do_deploy:append() {
 
-    f="install_custom_fw_sd.txt"
+    f="install_plc_fw_sd.txt"
     f_base="${f%.*}"
     f_scr="${DEPLOYDIR}/${f_base}.scr"
 
@@ -20,5 +20,5 @@ do_deploy:append() {
 
 # make sure this scr be installed into target path
 FILES_${PN} += " \
-    /boot/install_custom_fw_sd.scr \
+    /boot/install_plc_fw_sd.scr \
 "
