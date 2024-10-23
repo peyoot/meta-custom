@@ -31,7 +31,7 @@ INSTALL_FW_UBOOT_SCRIPTS = " \
     file://install_linux_fw_sd.txt \
     file://install_linux_fw_usb.txt \
     file://install_linux_fw_uuu.sh \
-    file://install_linux_fw_sd.txt \
+    file://install_plc_fw_sd.txt \
 "
 
 SRC_URI = " \
