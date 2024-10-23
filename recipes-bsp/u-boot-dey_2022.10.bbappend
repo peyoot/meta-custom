@@ -24,7 +24,12 @@ UBOOT_GIT_URI ?= "${@oe.utils.conditional('DIGI_INTERNAL_GIT', '1' , '${UBOOT_UR
 
 do_compile_prepend() {
     # 复制 install_plc_fw_sd.txt 到 WORKDIR
-    cp ${WORKDIR}/install_plc_fw_sd.txt${B}/
+    cp ${WORKDIR}/install_plc_fw_sd.txt ${B}/
+    if [ -f ${B}/install_plc_fw_sd.txt ]; then
+        echo "File install_plc_fw_sd.txt copied successfully to ${B}"
+    else
+        echo "Failed to copy install_plc_fw_sd.txt to ${B}"
+    fi
 }
 
 INSTALL_FW_UBOOT_SCRIPTS = " \
