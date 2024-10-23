@@ -21,15 +21,24 @@ UBOOT_URI_STASH = "${DIGI_MTK_GIT}/uboot/u-boot-denx.git;protocol=ssh"
 UBOOT_URI_GITHUB = "${DIGI_GITHUB_GIT}/u-boot.git;protocol=https"
 UBOOT_GIT_URI ?= "${@oe.utils.conditional('DIGI_INTERNAL_GIT', '1' , '${UBOOT_URI_STASH}', '${UBOOT_URI_GITHUB}', d)}"
 
+
+do_compile_prepend() {
+    # 复制 install_plc_fw_sd.txt 到 WORKDIR
+    cp ${WORKDIR}/install_plc_fw_sd.txt${B}/
+}
+
 INSTALL_FW_UBOOT_SCRIPTS = " \
-    file://install_plc_fw_sd.txt \
+    file://install_linux_fw_sd.txt \
+    file://install_linux_fw_usb.txt \
+    file://install_linux_fw_uuu.sh \
+    file://install_linux_fw_sd.txt \
 "
 
 SRC_URI = " \
+    ${UBOOT_GIT_URI};branch=${SRCBRANCH} \
+    file://boot.txt \
     ${INSTALL_FW_UBOOT_SCRIPTS} \
 "
-
-
 
 BUILD_UBOOT_SCRIPTS ?= "true"
 
