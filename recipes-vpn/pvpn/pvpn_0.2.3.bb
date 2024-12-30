@@ -22,7 +22,7 @@ FILES_${PN} += "${systemd_unitdir}/system/stunnel.service \
                 ${systemd_unitdir}/system/openvpn-client@.service \
                 /usr/local/bin/install_vpn.sh"
 
-do_install:append() {
+do_install_append() {
   install -d ${D}/${systemd_unitdir}/system
   install -d ${D}/usr/local/bin
   install -m 0644 ${WORKDIR}/stunnel.service ${D}/${systemd_unitdir}/system/
