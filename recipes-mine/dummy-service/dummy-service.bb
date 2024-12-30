@@ -12,7 +12,7 @@ SRC_URI = "file://dummy.sh \
 
 inherit systemd
 
-SYSTEMD_SERVICE:${PN} = "dummy.service"
+SYSTEMD_SERVICE_${PN} = "dummy.service"
 
 do_configure[noexec] = "1"
 do_compile[noexec] = "1"
