@@ -1,7 +1,7 @@
 SUMMARY = "pvpn daemon"
 DESCRIPTION = "adding pvpn service file to systemd"
-FILEEXTRAPATHS:prepend := "${THISDIR}/files:"
-RDEPENDS:${PN} = "bash"
+FILEEXTRAPATHS_prepend := "${THISDIR}/files:"
+RDEPENDS_${PN} = "bash"
 
 PVPN_GIT_URI = "https://github.com/peyoot/pvpn/archive/refs/tags/${PV}.zip;protocol=https"
 SRC_URI[sha256sum] = "edfcf40ca1e4125e22b2100b4b80ccbd090c23b3cba4db873ba523fbab1df8ef"
@@ -14,11 +14,11 @@ SYSTEMD_AUTO_ENABLE = "disable"
 SYSTEMD_SERVICE_${PN} = "stunnel.service openvpn-client@.service"
 
 
-SRC_URI:append = " \
+SRC_URI_append = " \
                    ${PVPN_GIT_URI} \
                    file://stunnel.service \
                    file://openvpn-client@.service"
-FILES:${PN} += "${systemd_unitdir}/system/stunnel.service \
+FILES_${PN} += "${systemd_unitdir}/system/stunnel.service \
                 ${systemd_unitdir}/system/openvpn-client@.service \
                 /usr/local/bin/install_vpn.sh"
 

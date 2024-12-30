@@ -2,8 +2,8 @@
 SUMMARY = "Openvpn Config" 
 DESCRIPTION = "Adding config files to openvpn" 
 LICENSE = "CLOSED" 
-FILESEXTRAPATHS:prepend := "${THISDIR}/files:" 
-RPROVIDES:${PN} += "${PN}" 
+FILESEXTRAPATHS_prepend := "${THISDIR}/files:" 
+RPROVIDES_${PN} += "${PN}" 
 SRC_URI = "file://update-systemd-resolved"
 # Specify where to get the files
 S = "${WORKDIR}" 
@@ -16,5 +16,5 @@ do_install() {
         install -m 0644 ${WORKDIR}/update-systemd-resolved ${D}/etc/openvpn/
 }
 
-FILES:${PN} += "/ect/openvpn/* \
+FILES_${PN} += "/ect/openvpn/* \
         /etc/openvpn/update-systemd-resolved"
