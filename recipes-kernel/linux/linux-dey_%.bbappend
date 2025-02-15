@@ -1,12 +1,15 @@
 # meta-custom/recipes-kernel/linux/linux-dey_%.bbappend
 
-# 指定文件搜索路径
-FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
+# 添加自定义设备树仓库
+SRC_URI:append = " \
+    git://github.com/peyoot/ccmp25_dt;branch=dualeth-s;protocol=https;destsuffix=ccmp25_dt;name=ccmp25dt \
+"
 
-# 添加本地文件到 SRC_URI
-# ccmp25_dt dualeth-s
-SRC_URI:append = " file://ccmp25-plc.dts"
+# 指定自定义设备树仓库的提交哈希
+SRCREV_ccmp25dt = "c932586c9aa024c6e621c62656032b4acf4b2bdc"
 
+# 定义 SRCREV_FORMAT 以分离主内核仓库和自定义仓库的版本号
+SRCREV_FORMAT = "default_ccmp25dt"  # "default" 对应主内核仓库，"_ccmp25dt" 对应自定义仓库
 
 # 追加 do_unpack 任务以安装自定义 DTS 文件
 do_unpack:append() {
