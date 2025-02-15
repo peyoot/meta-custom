@@ -1,4 +1,8 @@
 
+# 设置 SRCREV_FORMAT 为 git
+SRCREV_FORMAT_linux = "git"
+SRCREV_FORMAT_ccmp25dt = "git"
+
 # 添加新的设备树文件
 SRC_URI += " \
     git://github.com/peyoot/ccmp25_dt;branch=dualeth-s;protocol=https;destsuffix=git/ccmp25_dt;name=ccmp25dt \
