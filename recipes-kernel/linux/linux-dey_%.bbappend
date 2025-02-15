@@ -1,4 +1,3 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 # 添加新的设备树文件
 SRC_URI += " \
