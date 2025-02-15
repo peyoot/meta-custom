@@ -4,6 +4,7 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 # 添加本地文件到 SRC_URI
+# ccmp25_dt dualeth-s
 SRC_URI:append = " file://ccmp25-plc.dts"
 
 
@@ -18,7 +19,8 @@ python install_dts() {
     import subprocess
 
     dts_src = os.path.join(d.getVar('WORKDIR', True), 'ccmp25-plc.dts')
-    dts_dest = os.path.join(d.getVar('KERNEL_SRC', True), 'arch/arm64/boot/dts/digi/ccmp25-plc.dts')
+    kernel_src = d.getVar('S', True)  # 使用 S 变量来获取内核源码路径
+    dts_dest = os.path.join(kernel_src, 'arch/arm64/boot/dts/digi/ccmp25-plc.dts')
 
     subprocess.run(['install', '-D', '-m', '644', dts_src, dts_dest], check=True)
 }
