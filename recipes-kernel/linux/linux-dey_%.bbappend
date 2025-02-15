@@ -11,8 +11,8 @@ SRCREV_ccmp25dt = "c932586c9aa024c6e621c62656032b4acf4b2bdc"
 # 定义 SRCREV_FORMAT 以分离主内核仓库和自定义仓库的版本号
 SRCREV_FORMAT = "default_ccmp25dt"  # "default" 对应主内核仓库，"_ccmp25dt" 对应自定义仓库
 
-# 追加 do_unpack 任务以安装自定义 DTS 文件
-do_unpack:append() {
+# 追加 do_patch 任务以安装自定义 DTS 文件
+do_patch:append() {
     bb.build.exec_func('install_dts', d)
 }
 
