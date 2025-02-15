@@ -9,7 +9,7 @@ SRC_URI:append = " \
 SRCREV_ccmp25dt = "c932586c9aa024c6e621c62656032b4acf4b2bdc"
 
 # 定义 SRCREV_FORMAT 以分离主内核仓库和自定义仓库的版本号
-SRCREV_FORMAT = "default_ccmp25dt"  # "default" 对应主uboot仓库，"_ccmp25dt" 对应自定义仓库
+SRCREV_FORMAT = "default_ccmp25dt"
 
 
 # 在编译前替换设备树文件和配置文件
