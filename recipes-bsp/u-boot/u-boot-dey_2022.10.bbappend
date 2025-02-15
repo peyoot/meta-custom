@@ -1,12 +1,12 @@
 # meta-custom/recipes-bsp/u-boot/u-boot-dey_2022.10.bbappend
 
 # 指定 Git 仓库和分支
-SRC_URI_append = " git://github.com/peyoot/ccmp25_dt.git;protocol=https;branch=dualeth-s"
+SRC_URI:append = " git://github.com/peyoot/ccmp25_dt.git;protocol=https;branch=dualeth-s"
 
 # 指定 Git 仓库的修订版本
 # 如果你有特定的提交哈希，可以在这里指定，例如：SRCREV = "abc123def456"
 # 如果使用分支，可以设置为 "branch=<branch_name>,commit=<commit_hash>"
-SRCREV_append_ccmp25_dt = "${AUTOREV}"
+SRCREV_ccmp25_dt = "${AUTOREV}"
 
 # 在编译前替换设备树文件和配置文件
 do_patch() {
