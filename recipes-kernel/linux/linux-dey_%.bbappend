@@ -21,8 +21,8 @@ python install_dts() {
     import os
     import subprocess
 
-    dts_src = os.path.join(d.getVar('WORKDIR', True), 'ccmp25-plc.dts')
-    kernel_src = d.getVar('S', True)  # 使用 S 变量来获取内核源码路径
+    dts_src = os.path.join(d.getVar('WORKDIR', True), 'ccmp25_dt/ccmp25-plc.dts')
+    kernel_src = d.getVar('S', True)
     dts_dest = os.path.join(kernel_src, 'arch/arm64/boot/dts/digi/ccmp25-plc.dts')
 
     subprocess.run(['install', '-D', '-m', '644', dts_src, dts_dest], check=True)
