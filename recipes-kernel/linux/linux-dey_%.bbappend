@@ -30,19 +30,15 @@ python install_dts() {
 
 
 # 为 ccmp25-dvk 机器添加自定义设备树二进制文件
-STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
-    ccmp25-plc.dtb \
-    ccmp25-dvk.dtb \
-    _ov_board_e55rb-i-mw346-c-mipi-dsi_ccmp25-dvk.dtbo \
-    _ov_board_g101evn010-lvds_ccmp25-dvk.dtbo \
-    _ov_board_imx335-mipi-csi_ccmp25-dvk.dtbo \
-    _ov_board_mikroe-accel2-click_ccmp25-dvk.dtbo \
-    _ov_board_mikroe-gyro-click_ccmp25-dvk.dtbo \
-    _ov_board_mikroe-i2c-to-spi-click_ccmp25-dvk.dtbo \
-    _ov_board_mikroe-mcp2518fd-click_ccmp25-dvk.dtbo \
-    _ov_board_n25q256a-spi-nor-flash_ccmp25-dvk.dtbo \
-    _ov_board_nhd-3-5-640480ef-msxp-mipi-dsi_ccmp25-dvk.dtbo \
-    _ov_board_usb-3-0-typec_ccmp25-dvk.dtbo \
-    _ov_som_bt_ccmp25.dtbo \
-    _ov_som_wifi_ccmp25.dtbo \
-"
+STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += "ccmp25-plc.dtb"
+#KERNEL_DEVICETREE += "ccmp25-plc.dtb"
+
+do_install:prepend:ccmp2() {
+#    echo "KERNEL_DEVICETREE: ${KERNEL_DEVICETREE}"  and check log when perform bitbake -D -v linux-dey
+    if [ -d "${B}/arch/${ARCH}/boot/dts/digi" ]; then
+        for dtbf in ${KERNEL_DEVICETREE}; do
+            install -m 0644 "${B}/arch/${ARCH}/boot/dts/digi/${dtbf}" "${B}/arch/${ARCH}/boot/dts/"
+        done
+    fi
+}
+
