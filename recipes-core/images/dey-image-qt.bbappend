@@ -7,10 +7,10 @@ export LANG = "en_US.UTF-8"
 export LC_ALL = "en_US.UTF-8"
 
 # 添加缺失的库到镜像
-IMAGE_INSTALL:append = " packagegroup-imx-ml gstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-plugins-bad gstreamer1.0-rtsp-server gstreamer1.0-omx gstreamer1.0-plugins-base-apps gst-variable-rtsp-server x264 vpx libjpeg-turbo libpng zlib nano tmux localedef glibc-utils v4l-utils uhttpd"
+IMAGE_INSTALL:append = " gstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-plugins-bad gstreamer1.0-rtsp-server gstreamer1.0-omx gstreamer1.0-plugins-base-apps gst-variable-rtsp-server x264 libjpeg-turbo libpng zlib nano tmux localedef glibc-utils v4l-utils sthttpd"
 
 IMAGE_INSTALL:remove = " cccs connectcore-demo-example busybox-httpd"
 
 
 # 接受许可证（可选，如果 LICENSE_FLAGS_ACCEPTED 未在全局设置）
-LICENSE_FLAGS_ACCEPTED:append = " commercial"
+LICENSE_FLAGS_ACCEPTED:append = " commercial_gpl"
