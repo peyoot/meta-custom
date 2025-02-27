@@ -39,8 +39,8 @@ FILES:${PN}-httpd:append = " \
     ${sysconfdir}/init.d/busybox-httpd \
 "
 SYSTEMD_PACKAGES += "${PN}-httpd"
-SYSTEMD_SERVICE:${PN}-httpd = "busybox-httpd.service"  # 唯一服务名称
+SYSTEMD_SERVICE:${PN}-httpd = "busybox-httpd.service" 
 SYSTEMD_AUTO_ENABLE:${PN}-httpd = "disable"
 INITSCRIPT_PACKAGES += "${PN}-httpd"
-INITSCRIPT_NAME:${PN}-httpd = "busybox-httpd"         # 唯一脚本名称
+INITSCRIPT_NAME:${PN}-httpd = "busybox-httpd"     
 INITSCRIPT_PARAMS:${PN}-httpd = "stop 21 0 1 6 ."
