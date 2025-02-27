@@ -1,27 +1,31 @@
-# meta-custom/recipes-core/busybox/busybox_%.bbappend
+# 自定义 busybox-httpd 配置
+
+# 定义新端口和路径
+BUSYBOX_HTTPD_PORT = "8080"
+BUSYBOX_HTTPD_ROOT = "/srv/busybox-www"
 
 # 添加自定义配置片段
 SRC_URI += "file://httpd-custom.cfg"
 
-# 覆盖默认的 HTTP 服务配置
-do_configure:append() {
-    # 设置 HTTP 服务端口为 8080（避免与 sthttpd 冲突）
-    echo "CONFIG_HTTPD_PORT=8080" >> ${WORKDIR}/httpd-custom.cfg
-    # 修改默认的网页根目录（可选）
-    echo "CONFIG_HTTPD_DOCUMENT_ROOT=/srv/busybox-www" >> ${WORKDIR}/httpd-custom.cfg
+do_configure:prepend() {
+    echo "CONFIG_HTTPD_PORT=${BUSYBOX_HTTPD_PORT}" >> ${WORKDIR}/httpd-custom.cfg
+    echo "CONFIG_HTTPD_DOCUMENT_ROOT=${BUSYBOX_HTTPD_ROOT}" >> ${WORKDIR}/httpd-custom.cfg
 }
 
-# 在同一个 bbappend 文件中添加以下内容
 do_install:append() {
-    # 修改 SysVinit 脚本的端口和路径
-    if [ -f ${D}${sysconfdir}/init.d/httpd ]; then
-        sed -i 's|port=80|port=8080|g' ${D}${sysconfdir}/init.d/httpd
-        sed -i 's|/srv/www|/srv/busybox-www|g' ${D}${sysconfdir}/init.d/httpd
+    # 修改 SysVinit 脚本
+    if [ -f ${D}${sysconfdir}/init.d/busybox-httpd ]; then
+        sed -i "s|port=80|port=${BUSYBOX_HTTPD_PORT}|g" ${D}${sysconfdir}/init.d/busybox-httpd
+        sed -i "s|/srv/www|${BUSYBOX_HTTPD_ROOT}|g" ${D}${sysconfdir}/init.d/busybox-httpd
     fi
 
-    # 修改 systemd 服务（如果存在）
+    # 修改 systemd 服务
     if [ -f ${D}${systemd_unitdir}/system/busybox-httpd.service ]; then
-        sed -i 's|--port=80|--port=8080|g' ${D}${systemd_unitdir}/system/busybox-httpd.service
-        sed -i 's|/srv/www|/srv/busybox-www|g' ${D}${systemd_unitdir}/system/busybox-httpd.service
+        sed -i "s|--port 80|--port ${BUSYBOX_HTTPD_PORT}|g" ${D}${systemd_unitdir}/system/busybox-httpd.service
+        sed -i "s|/srv/www|${BUSYBOX_HTTPD_ROOT}|g" ${D}${systemd_unitdir}/system/busybox-httpd.service
     fi
 }
+
+# 禁用自启动
+INITSCRIPT_PARAMS:${PN}-httpd = "stop 21 0 1 6 ."
+SYSTEMD_AUTO_ENABLE:${PN}-httpd = "disable"
