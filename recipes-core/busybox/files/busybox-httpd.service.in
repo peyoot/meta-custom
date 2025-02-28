@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=forking
-ExecStart=@sbindir@/httpd -h /srv/www-custom -p 8080
+ExecStart=@sbindir@/httpd -h /srv/busybox-www -p 8080
 Restart=always
 RestartSec=5
 
