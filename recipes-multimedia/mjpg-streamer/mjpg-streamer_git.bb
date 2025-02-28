@@ -2,7 +2,8 @@
 
 SUMMARY = "MJPG-streamer for streaming video"
 LICENSE = "GPLv2"
-LIC_FILES_CHKSUM = "file://LICENSE;md5=751419260aa954499f7abaabaa882bbe"
+LICFILESCHKSUM = "file://mjpg-streamer-experimental/LICENSE;md5=751419260aa954499f7abaabaa882bbe"
+
 
 SRC_URI = "git://github.com/jacksonliam/mjpg-streamer.git;protocol=https;branch=master"
 SRCREV = "${AUTOREV}"
