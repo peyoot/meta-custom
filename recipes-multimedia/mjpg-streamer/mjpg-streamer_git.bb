@@ -8,13 +8,17 @@ SRCREV = "${AUTOREV}"
 
 S = "${WORKDIR}/git"
 
-DEPENDS = "libjpeg libv4l"
+DEPENDS = "jpeg libv4l"
 
 # 指定需要编译的插件
 PLUGINS = "input_uvc.so output_http.so"
 
+# 添加头文件和库路径
+CFLAGS:append = " -I${STAGING_INCDIR}"
+LDFLAGS:append = " -L${STAGING_LIBDIR} -ljpeg"
+
 # 交叉编译参数
-EXTRA_OEMAKE = "CC='${CC}' LD='${LD}' CFLAGS='${CFLAGS}' LDFLAGS='${LDFLAGS}'"
+EXTRA_OEMAKE = "CC='${CC}' LD='${LD}'"
 
 do_compile() {
     # 编译主程序
