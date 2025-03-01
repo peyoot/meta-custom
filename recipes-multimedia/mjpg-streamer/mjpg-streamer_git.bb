@@ -9,20 +9,19 @@ SRCREV = "${AUTOREV}"
 
 S = "${WORKDIR}/git/mjpg-streamer-experimental"
 
-DEPENDS = "jpeg libv4l"
-# 添加构建依赖cmake-native
+# 添加所有插件可能需要的依赖（根据实际需要调整）
+DEPENDS = "jpeg libv4l libopencv"
 DEPENDS += "cmake-native"
 
-# 使用CMake构建
 inherit cmake
 
-# 启用必要的插件
+# 启用所有插件（或根据需要选择）
 EXTRA_OECMAKE = " \
-    -DPLUGIN_INPUT_UVC=ON \
-    -DPLUGIN_OUTPUT_HTTP=ON \
+    -DPLUGIN_INPUT_ALL=ON \
+    -DPLUGIN_OUTPUT_ALL=ON \
+    -DENABLE_HTTP_MANAGEMENT=ON \
 "
 
-# 安装路径调整
 do_install() {
     install -d ${D}${bindir}
     install -d ${D}${libdir}/mjpg-streamer
@@ -30,9 +29,8 @@ do_install() {
     # 安装主程序
     install -m 0755 ${B}/mjpg_streamer ${D}${bindir}/
 
-    # 安装插件
-    install -m 0755 ${B}/input_uvc.so ${D}${libdir}/mjpg-streamer/
-    install -m 0755 ${B}/output_http.so ${D}${libdir}/mjpg-streamer/
+    # 自动安装所有插件（递归搜索.so文件）
+    find ${B}/plugins/ -name "*.so" -exec install -Dm 0755 {} ${D}${libdir}/mjpg-streamer/ \;
 }
 
 FILES:${PN} += " \
