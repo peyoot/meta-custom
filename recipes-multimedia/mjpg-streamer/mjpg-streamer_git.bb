@@ -2,47 +2,37 @@
 
 SUMMARY = "MJPG-streamer for streaming video"
 LICENSE = "GPLv2"
-LICFILESCHKSUM = "file://mjpg-streamer-experimental/LICENSE;md5=751419260aa954499f7abaabaa882bbe"
-
+LIC_FILES_CHKSUM = "file://LICENSE;md5=751419260aa954499f7abaabaa882bbe"
 
 SRC_URI = "git://github.com/jacksonliam/mjpg-streamer.git;protocol=https;branch=master"
 SRCREV = "${AUTOREV}"
 
-S = "${WORKDIR}/git"
+S = "${WORKDIR}/git/mjpg-streamer-experimental"
 
 DEPENDS = "jpeg libv4l"
+# 添加构建依赖cmake-native
+DEPENDS += "cmake-native"
 
-# 指定需要编译的插件
-PLUGINS = "input_uvc.so output_http.so"
+# 使用CMake构建
+inherit cmake
 
-# 添加头文件和库路径
-CFLAGS:append = " -I${STAGING_INCDIR}"
-LDFLAGS:append = " -L${STAGING_LIBDIR} -ljpeg"
+# 启用必要的插件
+EXTRA_OECMAKE = " \
+    -DPLUGIN_INPUT_UVC=ON \
+    -DPLUGIN_OUTPUT_HTTP=ON \
+"
 
-# 交叉编译参数
-EXTRA_OEMAKE = "CC='${CC}' LD='${LD}'"
-
-do_compile() {
-    # 编译主程序
-    oe_runmake -C mjpg-streamer-experimental
-
-    # 编译插件
-    for plugin in ${PLUGINS}; do
-        oe_runmake -C mjpg-streamer-experimental/plugins/${plugin%.so}
-    done
-}
-
+# 安装路径调整
 do_install() {
     install -d ${D}${bindir}
     install -d ${D}${libdir}/mjpg-streamer
 
     # 安装主程序
-    install -m 0755 mjpg-streamer-experimental/mjpg_streamer ${D}${bindir}/
+    install -m 0755 ${B}/mjpg_streamer ${D}${bindir}/
 
     # 安装插件
-    for plugin in ${PLUGINS}; do
-        install -m 0755 mjpg-streamer-experimental/plugins/${plugin%.so}/${plugin} ${D}${libdir}/mjpg-streamer/
-    done
+    install -m 0755 ${B}/input_uvc.so ${D}${libdir}/mjpg-streamer/
+    install -m 0755 ${B}/output_http.so ${D}${libdir}/mjpg-streamer/
 }
 
 FILES:${PN} += " \
