@@ -16,7 +16,10 @@ DEPENDS += "cmake-native"
 inherit cmake
 
 # 启用插件（或根据需要选择）
-EXTRA_OECMAKE = " "
+EXTRA_OECMAKE = " \
+    -DPLUGIN_INPUT_UVC=ON \
+    -DPLUGIN_OUTPUT_HTTP=ON \
+"
 
 do_install() {
     install -d ${D}${bindir}
