@@ -1,0 +1,12 @@
+[Unit]
+Description=Set WiFi Regulatory Domain
+After=network.target
+Before=hostapd.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "/usr/sbin/iw reg reload && /usr/sbin/iw reg set CN"
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

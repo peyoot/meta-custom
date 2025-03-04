@@ -1,23 +1,47 @@
-# 关键路径修正
-FILESEXTRAPATHS:prepend := "${THISDIR}/init-ifupdown-1.0:"
+# 路径扩展（通用 + ccimx9 覆盖）
+FILESEXTRAPATHS:prepend := " \
+    ${THISDIR}/${BP}/ccimx9: \
+    ${THISDIR}/${BP}: \
+"
 
-# 安全追加文件
+# 通用文件（所有机型）
 SRC_URI:append = " \
     file://udhcpd.conf \
     file://udhcpd.service \
 "
 
-# 继承 systemd 特性
+# ccimx9 专用文件（通过 MACHINEOVERRIDES 触发）
+SRC_URI:append:ccimx9 = " \
+    file://ccimx9/udhcpd.conf \
+    file://ccimx9/udhcpd.service \
+    file://ccimx9/set-regdomain.service \
+"
+
+# 继承 systemd
 inherit systemd
 
-# 添加 systemd 服务
+# 通用服务（非 ccimx9 机型）
 SYSTEMD_SERVICE:${PN} += "udhcpd.service"
 
-do_install:append() {
-    # 安装 udhcpd 配置文件
-    install -m 0644 ${WORKDIR}/udhcpd.conf ${D}${sysconfdir}/
+# ccimx9 专用服务（通过覆盖标识符触发）
+SYSTEMD_SERVICE:${PN}:append:ccimx9 = " \
+    udhcpd.service \
+    set-regdomain.service \
+"
 
-    # 安装 systemd 服务单元
+# 通用安装步骤（非 ccimx9 机型）
+do_install:append() {
+    install -m 0644 ${WORKDIR}/udhcpd.conf ${D}${sysconfdir}/
     install -d ${D}${systemd_system_unitdir}
     install -m 0644 ${WORKDIR}/udhcpd.service ${D}${systemd_system_unitdir}/
 }
+
+# ccimx9 专用安装步骤（覆盖通用配置）
+do_install:append:ccimx9() {
+    install -m 0644 ${WORKDIR}/ccimx9/udhcpd.conf ${D}${sysconfdir}/udhcpd.conf
+    install -d ${D}${systemd_system_unitdir}
+    install -m 0644 ${WORKDIR}/ccimx9/udhcpd.service ${D}${systemd_system_unitdir}/
+    install -m 0644 ${WORKDIR}/ccimx9/set-regdomain.service ${D}${systemd_system_unitdir}/
+    sed -i 's/wlan1/uap0/g' ${D}${sysconfdir}/network/interfaces
+}
+
