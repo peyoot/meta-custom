@@ -17,17 +17,8 @@ SRC_URI:append:ccimx9 = " \
     file://ccimx9/set-regdomain.service \
 "
 
-# 继承 systemd
-inherit systemd
-
-# 通用服务（非 ccimx9 机型）
 SYSTEMD_SERVICE:${PN} += "udhcpd.service"
-
-# ccimx9 专用服务（通过覆盖标识符触发）
-SYSTEMD_SERVICE:${PN}:append:ccimx9 = " \
-    udhcpd.service \
-    set-regdomain.service \
-"
+SYSTEMD_SERVICE:${PN}:append:ccimx9 = " set-regdomain.service"
 
 # 通用安装步骤（非 ccimx9 机型）
 do_install:append() {
@@ -42,6 +33,5 @@ do_install:append:ccimx9() {
     install -d ${D}${systemd_system_unitdir}
     install -m 0644 ${WORKDIR}/ccimx9/udhcpd.service ${D}${systemd_system_unitdir}/
     install -m 0644 ${WORKDIR}/ccimx9/set-regdomain.service ${D}${systemd_system_unitdir}/
-    sed -i 's/wlan1/uap0/g' ${D}${sysconfdir}/network/interfaces
 }
 
