@@ -7,7 +7,7 @@ export LANG = "en_US.UTF-8"
 export LC_ALL = "en_US.UTF-8"
 
 # 添加缺失的库到镜像
-IMAGE_INSTALL:append = " gstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-plugins-bad gstreamer1.0-rtsp-server gstreamer1.0-omx gstreamer1.0-plugins-base-apps gst-variable-rtsp-server mjpg-streamer x264 libjpeg-turbo libpng zlib nano tmux localedef glibc-utils v4l-utils sthttpd ttf-wqy-zenhei ttf-wqy-microhei fontconfig glibc-localedata-en-us glibc-localedata-zh-cn"
+IMAGE_INSTALL:append = " gstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-plugins-bad gstreamer1.0-rtsp-server gstreamer1.0-omx gstreamer1.0-plugins-base-apps gst-variable-rtsp-server mjpg-streamer x264 libjpeg-turbo libpng zlib nano tmux localedef glibc-utils v4l-utils sthttpd ttf-wqy-zenhei fontconfig glibc-localedata-en-us glibc-localedata-zh-cn"
 
 
 
