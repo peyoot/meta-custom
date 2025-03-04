@@ -2,6 +2,7 @@
 FILESEXTRAPATHS:prepend := " \
     ${THISDIR}/${BP}/ccimx9: \
     ${THISDIR}/${BP}: \
+    ${COREBASE}/../meta-digi/meta-digi-dey/recipes-core/init-ifupdown/${BP}: \
 "
 
 # 通用文件（所有机型）
