@@ -1,8 +1,5 @@
 # 路径扩展（通用 + ccimx9 覆盖）
-FILESEXTRAPATHS:prepend := " \
-    ${THISDIR}/${BP}: \
-    ${THISDIR}/${BP}/ccimx9: \
-"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${BP}:"
 
 # 通用文件（所有机型）
 SRC_URI:append = " \
