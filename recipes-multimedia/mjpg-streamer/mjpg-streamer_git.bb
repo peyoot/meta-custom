@@ -23,16 +23,16 @@ EXTRA_OECMAKE = " \
 
 do_install() {
     install -d ${D}${bindir}
-    install -d ${D}${libdir}/mjpg-streamer
+    install -d ${D}${libdir}
 
     # 安装主程序
     install -m 0755 ${B}/mjpg_streamer ${D}${bindir}/
 
     # 自动安装所有插件（递归搜索.so文件）
-    find ${B}/plugins/ -name "*.so" -exec install -Dm 0755 {} ${D}${libdir}/mjpg-streamer/ \;
+    find ${B}/plugins/ -name "*.so" -exec install -Dm 0755 {} ${D}${libdir}/ \;
 }
 
 FILES:${PN} += " \
     ${bindir}/mjpg_streamer \
-    ${libdir}/mjpg-streamer/*.so \
+    ${libdir}/*.so \
 "
