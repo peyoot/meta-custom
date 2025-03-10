@@ -2,11 +2,11 @@
 
 # 添加自定义设备树仓库
 SRC_URI:append = " \
-    git://github.com/peyoot/ccmp25_dt;branch=dualeth-s;protocol=https;destsuffix=ccmp25_dt;name=ccmp25dt \
+    git://github.com/peyoot/ccmp25_dt;branch=scarthgap;protocol=https;destsuffix=ccmp25_dt;name=ccmp25dt \
 "
 
 # 指定自定义设备树仓库的提交哈希
-SRCREV_ccmp25dt = "c932586c9aa024c6e621c62656032b4acf4b2bdc"
+SRCREV_ccmp25dt = "9a9d4e1d6fd85ba0c00f362ac8a47aec6b894237"
 
 # 定义 SRCREV_FORMAT 以分离主内核仓库和自定义仓库的版本号
 SRCREV_FORMAT = "default_ccmp25dt" 
