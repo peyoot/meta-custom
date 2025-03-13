@@ -1,4 +1,4 @@
-# meta-custom/recipes-bsp/u-boot/u-boot-dey_2022.10.bbappend
+# meta-custom/recipes-bsp/u-boot/u-boot-dey_2023.10.bbappend
 
 # 添加自定义设备树仓库
 SRC_URI:append = " \
@@ -6,7 +6,7 @@ SRC_URI:append = " \
 "
 
 # 指定自定义设备树仓库的提交哈希
-# SRCREV_ccmp25dt = "c932586c9aa024c6e621c62656032b4acf4b2bdc"
+# SRCREV_ccmp25dt = "69af37437f02a934b84163231196c8431825240c"
 SRCREV_ccmp25dt = "${AUTOREV}"
 
 # 定义 SRCREV_FORMAT 以分离主内核仓库和自定义仓库的版本号
