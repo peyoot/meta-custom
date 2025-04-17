@@ -7,8 +7,11 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 RPROVIDES:${PN} += "${PN}"
 
 SRC_URI = "file://codesyscontrol.zip \
-        file://codesysstart.service"
+           file://my_nm.eth1 \
+           file://codesysstart.service"
 # Specify where to get the files
+
+DEPENDS += "networkmanager"
 
 inherit systemd
 
@@ -16,6 +19,11 @@ SYSTEMD_SERVICE:${PN} = "codesysstart.service"
 
 do_configure[noexec] = "1"
 do_compile[noexec] = "1"
+
+
+do_unpack() {
+    unzip ${WORKDIR}/codsyscontrol.zip -d ${WORKDIR}/codsyscontrol
+}
 
 
 do_install() {
@@ -32,9 +40,16 @@ do_install() {
     ln -s ${D}${systemd_unitdir}/system/codesysstart.service ${D}${sysconfdir}/systemd/system/codesysstart.service
 }
 
+do_install_append() {
 
-do_unpack() {
-    unzip ${WORKDIR}/codsyscontrol.zip -d ${WORKDIR}/codsyscontrol    
+    if [ -f ${D}${sysconfdir}/NetworkManager/system-connections/nm.eth1 ]; then
+        # 用你的自定义文件覆盖 nm.eth1
+        install -m 0600 ${WORKDIR}/my_nm.eth1${D}${sysconfdir}/NetworkManager/system-connections/nm.eth1
+    else
+        # 如果 nm.eth1 不存在，输出错误信息
+        echo "Error: nm.eth1 not found in ${D}${sysconfdir}/NetworkManager/system-connections/ yet, check priority of recipes"
+        exit 1
+    fi
 }
 
 FILES:${PN} += "${systemd_unitdir}/system/codesysstart.service \
