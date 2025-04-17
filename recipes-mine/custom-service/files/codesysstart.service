@@ -5,8 +5,6 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=codesys
-Group=codesys
 WorkingDirectory=/usr/local/
 ExecStart=/usr/local/codesyscontrol -d CODESYSControl.cfgmy
 Restart=on-failure
