@@ -1,0 +1,13 @@
+[Unit]
+Description=Start CODESYS after network is online
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/codesyscontrol -d /usr/local/CODESYSControl.cfgmy
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
