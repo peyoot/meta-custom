@@ -40,7 +40,7 @@ do_install() {
     ln -s ${D}${systemd_unitdir}/system/codesysstart.service ${D}${sysconfdir}/systemd/system/codesysstart.service
 }
 
-do_install_append() {
+do_install:append() {
 
     if [ -f ${D}${sysconfdir}/NetworkManager/system-connections/nm.eth1 ]; then
         # 用你的自定义文件覆盖 nm.eth1
