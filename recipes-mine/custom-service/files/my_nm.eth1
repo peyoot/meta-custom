@@ -1,9 +1,7 @@
 [connection]
 id=eth1
-uuid=7296aec4-0cf2-3172-a2a8-79bb745d5a9a
 type=ethernet
 interface-name=eth1
-timestamp=1736366333
 
 [ethernet]
 
