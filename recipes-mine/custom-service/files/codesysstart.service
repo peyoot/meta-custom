@@ -4,10 +4,14 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=/usr/local/codesyscontrol -d /usr/local/CODESYSControl.cfgmy
+Type=simple
+User=codesys
+Group=codesys
+WorkingDirectory=/usr/local/
+ExecStart=/usr/local/codesyscontrol -d CODESYSControl.cfgmy
 Restart=on-failure
 RestartSec=5
+TimeoutStartSec=120
 
 [Install]
 WantedBy=multi-user.target
-
