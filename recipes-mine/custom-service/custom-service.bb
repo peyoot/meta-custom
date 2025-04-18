@@ -10,8 +10,6 @@ SRC_URI = "file://codesyscontrol.zip \
            file://codesysstart.service"
 # Specify where to get the files
 
-DEPENDS += "networkmanager"
-
 inherit systemd
 
 SYSTEMD_SERVICE:${PN} = "codesysstart.service"
@@ -31,9 +29,6 @@ do_install() {
 
     install -d ${D}/usr/local
     cp -r ${WORKDIR}/codsyscontrol/* ${D}/usr/local/
-
-#    install -d ${D}${bindir}
-#    install -m 0755 ${WORKDIR}/dummy.sh ${D}${bindir}/
 
     install -d ${D}${sysconfdir}/systemd/system
     ln -s ${D}${systemd_unitdir}/system/codesysstart.service ${D}${sysconfdir}/systemd/system/codesysstart.service
