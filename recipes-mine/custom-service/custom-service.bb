@@ -1,38 +1,33 @@
 # custom-service.bb
 
-SUMMARY = "custom systemd service"
+SUMMARY = "Custom systemd service"
 DESCRIPTION = "PLC demo systemd service on startup."
 LICENSE = "CLOSED"
-FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
-RPROVIDES:${PN} += "${PN}"
 
-SRC_URI = "file://codesyscontrol.zip \
-           file://codesysstart.service"
-# Specify where to get the files
+SRC_URI = " \
+    file://codesyscontrol.tar.gz \
+    file://codesysstart.service \
+"
 
 inherit systemd
 
 SYSTEMD_SERVICE:${PN} = "codesysstart.service"
+SYSTEMD_AUTO_ENABLE = "enable"
 
 do_configure[noexec] = "1"
 do_compile[noexec] = "1"
 
-
-do_unpack() {
-    unzip ${WORKDIR}/codsyscontrol.zip -d ${WORKDIR}/codsyscontrol
-}
-
-
 do_install() {
+    # Install systemd service
     install -d ${D}${systemd_unitdir}/system
     install -m 0644 ${WORKDIR}/codesysstart.service ${D}${systemd_unitdir}/system/
 
+    # Install files from tar.gz to /usr/local
     install -d ${D}/usr/local
-    cp -r ${WORKDIR}/codsyscontrol/* ${D}/usr/local/
-
-    install -d ${D}${sysconfdir}/systemd/system
-    ln -s ${D}${systemd_unitdir}/system/codesysstart.service ${D}${sysconfdir}/systemd/system/codesysstart.service
+    cp -r ${WORKDIR}/codesyscontrol/* ${D}/usr/local/
 }
 
-FILES:${PN} += "${systemd_unitdir}/system/codesysstart.service \
-        /usr/local"
+FILES:${PN} += " \
+    ${systemd_unitdir}/system/codesysstart.service \
+    /usr/local \
+"
