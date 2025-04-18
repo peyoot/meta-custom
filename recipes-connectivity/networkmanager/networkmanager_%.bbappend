@@ -1,0 +1,8 @@
+# 强制使用静态IP模式（仅影响eth1）
+ETH1_MODE = "static"
+
+# 定义eth1专用参数（其他接口保持原逻辑）
+ETH1_STATIC_IP = "192.168.10.2"
+ETH1_STATIC_NETMASK = "255.255.255.0"
+ETH1_STATIC_GATEWAY = "192.168.10.1"
+ETH1_STATIC_DNS = "192.168.10.1"
