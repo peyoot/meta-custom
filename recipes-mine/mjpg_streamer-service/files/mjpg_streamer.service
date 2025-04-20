@@ -1,0 +1,14 @@
+[Unit]
+Description=Embedded Camera Streamer
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/http_camera_demo.sh
+Restart=on-failure
+RestartSec=5
+KillMode=process
+TimeoutStopSec=3
+
+[Install]
+WantedBy=multi-user.target
