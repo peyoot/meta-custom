@@ -25,6 +25,7 @@ do_install() {
     # Install files from tar.gz to /usr/local
     install -d ${D}/usr/local
     cp -r ${WORKDIR}/codesyscontrol/* ${D}/usr/local/
+    chmod -R 0755 ${D}/usr/local/codesyscontrol
 }
 
 FILES:${PN} += " \
