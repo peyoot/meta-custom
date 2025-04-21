@@ -1,5 +1,5 @@
---- a/mjpg-streamer-experimental/plugins/output_viewer/CMakeLists.txt
-+++ b/mjpg-streamer-experimental/plugins/output_viewer/CMakeLists.txt
+--- a/plugins/output_viewer/CMakeLists.txt
++++ b/plugins/output_viewer/CMakeLists.txt
 @@ -1,12 +1,12 @@
 -find_package(SDL)
 +find_package(SDL2 REQUIRED)
