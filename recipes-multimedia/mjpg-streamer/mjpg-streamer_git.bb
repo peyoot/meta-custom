@@ -10,7 +10,7 @@ SRCREV = "${AUTOREV}"
 S = "${WORKDIR}/git/mjpg-streamer-experimental"
 
 # 添加所有插件可能需要的依赖（根据实际需要调整）
-DEPENDS = "jpeg libv4l"
+DEPENDS = "jpeg libv4l libsdl2 libsdl2-image"
 DEPENDS += "cmake-native"
 EXTRA_OEMAKE += "WITH_SDL=1"
 
