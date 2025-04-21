@@ -11,7 +11,7 @@ S = "${WORKDIR}/git/mjpg-streamer-experimental"
 
 # 添加所有插件可能需要的依赖（根据实际需要调整）
 DEPENDS = "jpeg libv4l"
-DEPENDS += "cmake-native sdl"
+DEPENDS += "cmake-native"
 EXTRA_OEMAKE += "WITH_SDL=1"
 
 inherit cmake
