@@ -9,6 +9,30 @@ FRAMERATE=30               # 帧率设置
 DEFAULT_PORT=80            # 首选端口
 ALT_PORT_START=8080        # 备用端口起始
 MAX_PORT_TRY=3             # 最大端口尝试次数
+WEB_ROOT="/srv/mjpg_streamer/www"   #mjpg_streamer web
+
+### 创建网页目录和默认页面 ###
+mkdir -p ${WEB_ROOT}
+if [ ! -f "${WEB_ROOT}/index.html" ]; then
+    cat > ${WEB_ROOT}/index.html <<EOF
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera Stream</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { margin: 0; background: #000; }
+        img { width: 100%; height: 100vh; object-fit: contain; }
+    </style>
+</head>
+<body>
+    <img src="./?action=stream">
+</body>
+</html>
+EOF
+    echo "Created default index.html in ${WEB_ROOT}"
+fi
+
 
 ### 硬件检测函数 ###
 detect_usb_device() {

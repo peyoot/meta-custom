@@ -19,6 +19,7 @@ inherit cmake
 EXTRA_OECMAKE = " \
     -DPLUGIN_INPUT_UVC=ON \
     -DPLUGIN_OUTPUT_HTTP=ON \
+    -DPLUGIN_OUTPUT_VIEWER=ON \
 "
 
 do_install() {
