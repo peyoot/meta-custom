@@ -1,0 +1,13 @@
+--- a/plugins/output_viewer/output_viewer.c
++++ b/plugins/output_viewer/output_viewer.c
+@@ -24,8 +24,8 @@
+ #include <sys/time.h>
+ #include <dirent.h>
+ 
+-#include <SDL/SDL.h>
+-#include <SDL/SDL_image.h>
++#include <SDL2/SDL.h>
++#include <SDL2/SDL_image.h>
+ 
+ #include "../../mjpg_streamer.h"
+ #include "../../utils.h"

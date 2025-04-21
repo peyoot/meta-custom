@@ -25,6 +25,11 @@ EXTRA_OECMAKE = " \
     -DSDL2_LIBRARY=${STAGING_LIBDIR}/libSDL2.so \
 "
 
+SRC_URI += " \
+    file://0001-Fix-SDL2-detection-in-cmake.patch \
+    file://0002-Add-missing-SDL_image-header-includes.patch \
+
+
 do_install() {
     install -d ${D}${bindir}
     install -d ${D}${libdir}
