@@ -1,0 +1,20 @@
+--- a/mjpg-streamer-experimental/plugins/output_viewer/output_viewer.c
++++ b/mjpg-streamer-experimental/plugins/output_viewer/output_viewer.c
+@@ -23,7 +23,7 @@
+ #include <pthread.h>
+ #include <syslog.h>
+ 
+-#include <SDL/SDL.h>
++#include <SDL2/SDL.h>
+ #include <jpeglib.h>
+ 
+ 
+@@ -436,7 +436,7 @@
+ 
+         if(firstrun) {
+             /* create the primary surface (the visible window) */
+-            screen = SDL_SetVideoMode(rgbimage.width, rgbimage.height, 0, SDL_ANYFORMAT | SDL_HWSURFACE);
++            screen = SDL_CreateWindow("MJPG-Streamer Viewer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, rgbimage.width, rgbimage.height, SDL_WINDOW_SHOWN);
+             SDL_WM_SetCaption("MJPG-Streamer Viewer", NULL);
+ 
+             /* create a SDL surface to display the data */

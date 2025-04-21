@@ -26,9 +26,9 @@ EXTRA_OECMAKE = " \
 "
 
 SRC_URI += " \
-    file://0001-Fix-SDL2-detection-in-cmake.patch \
-    file://0002-Add-missing-SDL_image-header-includes.patch \
-
+    file://0001-Update-to-SDL2.patch \
+    file://0002-Fix-SDL2-headers.patch \
+"
 
 do_install() {
     install -d ${D}${bindir}
