@@ -4,14 +4,14 @@ Date: Thu, 11 Jan 2024 16:00:00 +0800
 Subject: [PATCH] Fix SDL2 support for output_viewer plugin
 
 ---
- .../plugins/output_viewer/CMakeLists.txt          | 10 +++++-----
- .../plugins/output_viewer/output_viewer.c         | 15 +++++++++++----
+ plugins/output_viewer/CMakeLists.txt          | 10 +++++-----
+ plugins/output_viewer/output_viewer.c         | 15 +++++++++++----
  2 files changed, 16 insertions(+), 9 deletions(-)
 
-diff --git a/mjpg-streamer-experimental/plugins/output_viewer/CMakeLists.txt b/mjpg-streamer-experimental/plugins/output_viewer/CMakeLists.txt
+diff --git a/plugins/output_viewer/CMakeLists.txt b/plugins/output_viewer/CMakeLists.txt
 index 6677bce..d6c49c6 100644
---- a/mjpg-streamer-experimental/plugins/output_viewer/CMakeLists.txt
-+++ b/mjpg-streamer-experimental/plugins/output_viewer/CMakeLists.txt
+--- a/plugins/output_viewer/CMakeLists.txt
++++ b/output_viewer/CMakeLists.txt
 @@ -1,11 +1,11 @@
  
 -find_package(SDL)
@@ -29,10 +29,10 @@ index 6677bce..d6c49c6 100644
 -    target_link_libraries(output_viewer ${SDL_LIBRARY} ${JPEG_LIB})
 +    target_link_libraries(output_viewer ${SDL2_LIBRARIES} ${JPEG_LIB})
  endif()
-diff --git a/mjpg-streamer-experimental/plugins/output_viewer/output_viewer.c b/mjpg-streamer-experimental/plugins/output_viewer/output_viewer.c
+diff --git a/plugins/output_viewer/output_viewer.c b/plugins/output_viewer/output_viewer.c
 index dd6c55b..d9f4f41 100644
---- a/mjpg-streamer-experimental/plugins/output_viewer/output_viewer.c
-+++ b/mjpg-streamer-experimental/plugins/output_viewer/output_viewer.c
+--- a/plugins/output_viewer/output_viewer.c
++++ b/plugins/output_viewer/output_viewer.c
 @@ -27,7 +27,7 @@
  #include <pthread.h>
  #include <syslog.h>
