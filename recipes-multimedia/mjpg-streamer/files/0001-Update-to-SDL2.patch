@@ -1,6 +1,6 @@
 --- a/plugins/output_viewer/CMakeLists.txt
 +++ b/plugins/output_viewer/CMakeLists.txt
-@@ -1,12 +1,12 @@
+@@ -1,8 +1,8 @@
 -find_package(SDL)
 +find_package(SDL2 REQUIRED)
  
