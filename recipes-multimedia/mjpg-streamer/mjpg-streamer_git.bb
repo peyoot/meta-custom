@@ -1,47 +1,37 @@
-# meta-custom/recipes-multimedia/mjpg-streamer/mjpg-streamer_git.bb
-
-SUMMARY = "MJPG-streamer for streaming video"
-LICENSE = "GPLv2"
+SUMMARY = "MJPG-streamer with SDL2 viewer support"
+LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=751419260aa954499f7abaabaa882bbe"
 
-SRC_URI = "git://github.com/jacksonliam/mjpg-streamer.git;protocol=https;branch=master"
-SRCREV = "${AUTOREV}"
+SRC_URI = " \
+    git://github.com/jacksonliam/mjpg-streamer.git;protocol=https;branch=master \
+    file://0001-Fix-SDL2-support.patch \
+"
+
+SRCREV = "310b29f4a94c46652b20c4b7b6e5cf24e532af39"
+
+DEPENDS = "jpeg libv4l libsdl2 libsdl2-image"
+DEPENDS += "cmake-native"
 
 S = "${WORKDIR}/git/mjpg-streamer-experimental"
 
-# 添加所有插件可能需要的依赖（根据实际需要调整）
-DEPENDS = "jpeg libv4l libsdl2 libsdl2-image"
-DEPENDS += "cmake-native"
-EXTRA_OEMAKE += "WITH_SDL=1"
+inherit cmake pkgconfig
 
-inherit cmake
-
-# 启用插件（或根据需要选择）
 EXTRA_OECMAKE = " \
     -DPLUGIN_INPUT_UVC=ON \
     -DPLUGIN_OUTPUT_HTTP=ON \
     -DPLUGIN_OUTPUT_VIEWER=ON \
-    -DSDL2_INCLUDE_DIR=${STAGING_INCDIR}/SDL2 \
-    -DSDL2_LIBRARY=${STAGING_LIBDIR}/libSDL2.so \
-"
-
-SRC_URI += " \
-    file://0001-Update-to-SDL2.patch \
-    file://0002-Fix-SDL2-headers.patch \
+    -DSDL2_DIR=${STAGING_LIBDIR}/cmake/SDL2 \
 "
 
 do_install() {
     install -d ${D}${bindir}
-    install -d ${D}${libdir}
+    install -d ${D}${libdir}/mjpg-streamer
 
-    # 安装主程序
     install -m 0755 ${B}/mjpg_streamer ${D}${bindir}/
-
-    # 自动安装所有插件（递归搜索.so文件）
-    find ${B}/plugins/ -name "*.so" -exec install -Dm 0755 {} ${D}${libdir}/ \;
+    install -m 0755 ${B}/plugins/output_viewer/output_viewer.so ${D}${libdir}/mjpg-streamer/
 }
 
 FILES:${PN} += " \
     ${bindir}/mjpg_streamer \
-    ${libdir}/*.so \
+    ${libdir}/mjpg-streamer/*.so \
 "
