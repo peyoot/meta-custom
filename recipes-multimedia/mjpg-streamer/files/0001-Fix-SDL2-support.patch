@@ -1,19 +1,19 @@
-From f70d8be55d34e1c673bf0eb0f6fa77286b246cbc Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Embedded Assistant <support@example.com>
 Date: Thu, 11 Jan 2024 16:00:00 +0800
 Subject: [PATCH] Fix SDL2 support for output_viewer plugin
 
 ---
- .../plugins/output_viewer/CMakeLists.txt          | 10 +++++-----
- .../plugins/output_viewer/output_viewer.c         | 15 +++++++++++----
+ plugins/output_viewer/CMakeLists.txt | 10 +++++-----
+ plugins/output_viewer/output_viewer.c | 15 +++++++++++----
  2 files changed, 16 insertions(+), 9 deletions(-)
 
-diff --git a/git/mjpg-streamer-experimental/plugins/output_viewer/CMakeLists.txt b/git/mjpg-streamer-experimental/plugins/output_viewer/CMakeLists.txt
+diff --git a/plugins/output_viewer/CMakeLists.txt b/plugins/output_viewer/CMakeLists.txt
 index 6677bce..d6c49c6 100644
---- a/git/mjpg-streamer-experimental/plugins/output_viewer/CMakeLists.txt
-+++ b/git/mjpg-streamer-experimental/plugins/output_viewer/CMakeLists.txt
-@@ -1,11 +1,11 @@
- 
+--- a/plugins/output_viewer/CMakeLists.txt
++++ b/plugins/output_viewer/CMakeLists.txt
+@@ -1,12 +1,12 @@
+ # SDL detection
 -find_package(SDL)
 +find_package(SDL2 REQUIRED)
  
@@ -29,11 +29,13 @@ index 6677bce..d6c49c6 100644
 -    target_link_libraries(output_viewer ${SDL_LIBRARY} ${JPEG_LIB})
 +    target_link_libraries(output_viewer ${SDL2_LIBRARIES} ${JPEG_LIB})
  endif()
-diff --git a/git/mjpg-streamer-experimental/plugins/output_viewer/output_viewer.c b/git/mjpg-streamer-experimental/plugins/output_viewer/output_viewer.c
+ 
+ # vi: ts=4 sw=4
+diff --git a/plugins/output_viewer/output_viewer.c b/plugins/output_viewer/output_viewer.c
 index dd6c55b..d9f4f41 100644
---- a/git/mjpg-streamer-experimental/plugins/output_viewer/output_viewer.c
-+++ b/git/mjpg-streamer-experimental/plugins/output_viewer/output_viewer.c
-@@ -27,7 +27,7 @@
+--- a/plugins/output_viewer/output_viewer.c
++++ b/plugins/output_viewer/output_viewer.c
+@@ -23,7 +23,7 @@
  #include <pthread.h>
  #include <syslog.h>
  
@@ -42,7 +44,7 @@ index dd6c55b..d9f4f41 100644
  #include <jpeglib.h>
  
  
-@@ -295,8 +295,15 @@ void *worker_thread(void *arg)
+@@ -436,8 +436,15 @@ void *worker_thread(void *arg)
  
          if(firstrun) {
              /* create the primary surface (the visible window) */
@@ -60,7 +62,7 @@ index dd6c55b..d9f4f41 100644
  
              /* create a SDL surface to display the data */
              image = SDL_AllocSurface(SDL_SWSURFACE, rgbimage.width, rgbimage.height, 24,
-@@ -322,7 +329,7 @@ void *worker_thread(void *arg)
+@@ -466,7 +473,7 @@ void *worker_thread(void *arg)
          SDL_BlitSurface(image, NULL, screen, NULL);
  
          /* redraw the whole surface */
@@ -69,3 +71,5 @@ index dd6c55b..d9f4f41 100644
      }
  
      pthread_cleanup_pop(1);
+-- 
+2.34.1
