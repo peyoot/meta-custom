@@ -1,23 +1,23 @@
-From 0000000000000000000000000000000000000000 Mon Apr 10 00:00:00 2025
-From: Peyoot Tu <peyoot@hotmail.com>
-Date: Thu, 11 Apr 2025 15:00:00 +0800
-Subject: [PATCH] Migrate output_viewer plugin to SDL2
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: User <user@example.com>
+Date: Thu, 11 Jan 2024 10:00:00 +0800
+Subject: [PATCH] Update to SDL2
 
 ---
  plugins/output_viewer/CMakeLists.txt | 10 +++++-----
  1 file changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/plugins/output_viewer/CMakeLists.txt b/plugins/output_viewer/CMakeLists.txt
-index 1234567..89abcde 100644
+index abcdef1..1234567 100644
 --- a/plugins/output_viewer/CMakeLists.txt
 +++ b/plugins/output_viewer/CMakeLists.txt
 @@ -1,12 +1,12 @@
- # SDL detection
 -find_package(SDL)
 +find_package(SDL2 REQUIRED)
  
- MJPG_STREAMER_PLUGIN_OPTION(output_viewer "SDL output viewer plugin"
+-MJPG_STREAMER_PLUGIN_OPTION(output_viewer "SDL output viewer plugin"
 -                            ONLYIF JPEG_LIB SDL_FOUND)
++MJPG_STREAMER_PLUGIN_OPTION(output_viewer "SDL2 output viewer plugin"
 +                            ONLYIF JPEG_LIB SDL2_FOUND)
  
  if (PLUGIN_OUTPUT_VIEWER)
