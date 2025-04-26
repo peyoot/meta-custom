@@ -11,7 +11,7 @@ Subject: [PATCH] Fix SDL2 support for output_viewer plugin
 diff --git a/plugins/output_viewer/CMakeLists.txt b/plugins/output_viewer/CMakeLists.txt
 index 6677bce..d6c49c6 100644
 --- a/plugins/output_viewer/CMakeLists.txt
-+++ b/output_viewer/CMakeLists.txt
++++ b/plugins/output_viewer/CMakeLists.txt
 @@ -1,11 +1,11 @@
  
 -find_package(SDL)
