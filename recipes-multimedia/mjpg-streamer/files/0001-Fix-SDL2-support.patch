@@ -4,9 +4,9 @@ Date: Thu, 11 Jan 2024 16:00:00 +0800
 Subject: [PATCH] Fix SDL2 support for output_viewer plugin
 
 ---
- plugins/output_viewer/CMakeLists.txt          | 10 +++++-----
- plugins/output_viewer/output_viewer.c         | 15 +++++++++++----
- 2 files changed, 16 insertions(+), 9 deletions(-)
+ plugins/output_viewer/CMakeLists.txt          | 10 +++----
+ plugins/output_viewer/output_viewer.c         | 31 ++++++++++++-------
+ 2 files changed, 23 insertions(+), 18 deletions(-)
 
 diff --git a/plugins/output_viewer/CMakeLists.txt b/plugins/output_viewer/CMakeLists.txt
 index 6677bce..d6c49c6 100644
@@ -30,7 +30,7 @@ index 6677bce..d6c49c6 100644
 +    target_link_libraries(output_viewer ${SDL2_LIBRARIES} ${JPEG_LIB})
  endif()
 diff --git a/plugins/output_viewer/output_viewer.c b/plugins/output_viewer/output_viewer.c
-index dd6c55b..d9f4f41 100644
+index dd6c55b..a3d2aab 100644
 --- a/plugins/output_viewer/output_viewer.c
 +++ b/plugins/output_viewer/output_viewer.c
 @@ -27,7 +27,7 @@
@@ -42,13 +42,21 @@ index dd6c55b..d9f4f41 100644
  #include <jpeglib.h>
  
  
-@@ -295,8 +295,15 @@ void *worker_thread(void *arg)
+@@ -44,6 +44,7 @@ typedef struct {
+     SDL_Surface *screen;
+     SDL_Surface *image;
+     SDL_Overlay *overlay;
++    SDL_Window *window;
+     int stop;
+ } context;
+ 
+@@ -295,18 +296,19 @@ void *worker_thread(void *arg)
  
          if(firstrun) {
              /* create the primary surface (the visible window) */
 -            screen = SDL_SetVideoMode(rgbimage.width, rgbimage.height, 0, SDL_ANYFORMAT | SDL_HWSURFACE);
 -            SDL_WM_SetCaption("MJPG-Streamer Viewer", NULL);
-+            SDL_Window *window = SDL_CreateWindow(
++            pglobal->in[param->input].context->window = SDL_CreateWindow(
 +                "MJPG-Streamer Viewer",
 +                SDL_WINDOWPOS_UNDEFINED,
 +                SDL_WINDOWPOS_UNDEFINED,
@@ -56,16 +64,30 @@ index dd6c55b..d9f4f41 100644
 +                rgbimage.height,
 +                SDL_WINDOW_SHOWN
 +            );
-+            screen = SDL_GetWindowSurface(window);
++            screen = SDL_GetWindowSurface(pglobal->in[param->input].context->window);
  
              /* create a SDL surface to display the data */
-             image = SDL_AllocSurface(SDL_SWSURFACE, rgbimage.width, rgbimage.height, 24,
-@@ -322,7 +329,7 @@ void *worker_thread(void *arg)
+-            image = SDL_AllocSurface(SDL_SWSURFACE, rgbimage.width, rgbimage.height, 24,
+-                                     0x0000FF, 0x00FF00, 0xFF0000, 0);
+-            if(image == NULL) {
+-                IPRINT("could not allocate SDL surface: %s\n", SDL_GetError());
+-                param->pglobal->stop = 1;
+-                free(picture);
+-                return NULL;
+-            }
++            image = SDL_CreateRGBSurfaceWithFormat(0, rgbimage.width, rgbimage.height, 24,
++                                                  SDL_PIXELFORMAT_RGB24);
++            SDL_FillRect(image, NULL, SDL_MapRGB(image->format, 0, 0, 0));
+ 
+             firstrun = 0;
+         }
+@@ -322,7 +324,8 @@ void *worker_thread(void *arg)
          SDL_BlitSurface(image, NULL, screen, NULL);
  
          /* redraw the whole surface */
 -        SDL_Flip(screen);
-+        SDL_UpdateWindowSurface(window);
++        SDL_UpdateWindowSurface(pglobal->in[param->input].context->window);
++        SDL_FreeSurface(screen);
      }
  
      pthread_cleanup_pop(1);
