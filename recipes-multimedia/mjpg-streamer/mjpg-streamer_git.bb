@@ -3,11 +3,10 @@ LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=751419260aa954499f7abaabaa882bbe"
 
 SRC_URI = " \
-    git://github.com/jacksonliam/mjpg-streamer.git;protocol=https;branch=master \
-    file://0001-Fix-SDL2-support.patch \
+    git://github.com/peyoot/mjpg-streamer.git;protocol=https;branch=master \
 "
 
-SRCREV = "310b29f4a94c46652b20c4b7b6e5cf24e532af39"
+SRCREV = "9ed90c00b0115f90a3512a6900aa5a1383168c20"
 
 DEPENDS = "jpeg libv4l libsdl2 libsdl2-image"
 DEPENDS += "cmake-native"
