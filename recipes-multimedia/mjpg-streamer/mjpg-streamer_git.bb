@@ -23,11 +23,11 @@ EXTRA_OECMAKE = " \
 "
 
 do_install() {
-    install -d ${D}${bindir}
-    install -d ${D}${libdir}/mjpg-streamer
+    install -d -m 0755 "${D}${bindir}"
+    install -d -m 0755 "${D}${libdir}/mjpg-streamer"
 
-    install -m 0755 ${B}/mjpg_streamer ${D}${bindir}/
-    install -m 0755 ${B}/plugins/output_viewer/output_viewer.so ${D}${libdir}/mjpg-streamer/
+    install -m 0755 "${B}/mjpg_streamer" "${D}${bindir}/"
+    find "${B}/plugins/" -name "*.so" -exec install -m 0755 {} "${D}${libdir}/mjpg-streamer/" \+
 }
 
 FILES:${PN} += " \
