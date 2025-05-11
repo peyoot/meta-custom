@@ -27,10 +27,10 @@ do_install() {
     install -d -m 0755 "${D}${libdir}/mjpg-streamer"
 
     install -m 0755 "${B}/mjpg_streamer" "${D}${bindir}/"
-    find "${B}/plugins/" -name "*.so" -exec install -m 0755 {} "${D}${libdir}/mjpg-streamer/" \;
+    find "${B}/plugins/" -name "*.so" -exec install -m 0755 {} "${D}${libdir}/" \;
 }
 
 FILES:${PN} += " \
     ${bindir}/mjpg_streamer \
-    ${libdir}/mjpg-streamer/*.so \
+    ${libdir}/*.so \
 "
