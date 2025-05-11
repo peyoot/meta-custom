@@ -24,7 +24,7 @@ EXTRA_OECMAKE = " \
 
 do_install() {
     install -d -m 0755 "${D}${bindir}"
-    install -d -m 0755 "${D}${libdir}/mjpg-streamer"
+    install -d -m 0755 "${D}${libdir}"
 
     install -m 0755 "${B}/mjpg_streamer" "${D}${bindir}/"
     find "${B}/plugins/" -name "*.so" -exec install -m 0755 {} "${D}${libdir}/" \;
