@@ -8,7 +8,7 @@ SRC_URI = " \
 
 SRCREV = "9ed90c00b0115f90a3512a6900aa5a1383168c20"
 
-DEPENDS = "jpeg libv4l sdl libjpeg-turbo"
+DEPENDS = "jpeg libv4l libsdl libjpeg-turbo"
 DEPENDS += "cmake-native"
 
 S = "${WORKDIR}/git/mjpg-streamer-experimental"
