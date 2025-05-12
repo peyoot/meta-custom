@@ -1,4 +1,4 @@
-SUMMARY = "MJPG-streamer with SDL2 viewer support"
+SUMMARY = "MJPG-streamer with SDL1.2 viewer support"
 LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=751419260aa954499f7abaabaa882bbe"
 
@@ -8,7 +8,7 @@ SRC_URI = " \
 
 SRCREV = "9ed90c00b0115f90a3512a6900aa5a1383168c20"
 
-DEPENDS = "jpeg libv4l libsdl2 libsdl2-image"
+DEPENDS = "jpeg libv4l sdl libjpeg-turbo""
 DEPENDS += "cmake-native"
 
 S = "${WORKDIR}/git/mjpg-streamer-experimental"
@@ -19,7 +19,6 @@ EXTRA_OECMAKE = " \
     -DPLUGIN_INPUT_UVC=ON \
     -DPLUGIN_OUTPUT_HTTP=ON \
     -DPLUGIN_OUTPUT_VIEWER=ON \
-    -DSDL2_DIR=${STAGING_LIBDIR}/cmake/SDL2 \
 "
 
 do_install() {
