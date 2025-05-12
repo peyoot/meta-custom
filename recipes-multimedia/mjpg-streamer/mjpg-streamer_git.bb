@@ -6,7 +6,7 @@ SRC_URI = " \
     git://github.com/peyoot/mjpg-streamer.git;protocol=https;branch=master \
 "
 
-SRCREV = "9ed90c00b0115f90a3512a6900aa5a1383168c20"
+SRCREV = "${AUTOREV}"
 
 DEPENDS = "jpeg libv4l libsdl libjpeg-turbo"
 DEPENDS += "cmake-native"
