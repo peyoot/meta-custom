@@ -8,7 +8,7 @@ SRC_URI = " \
 
 SRCREV = "${AUTOREV}"
 
-DEPENDS = "jpeg libv4l libsdl libjpeg-turbo"
+DEPENDS = "jpeg libv4l libsdl2 libjpeg-turbo"
 DEPENDS += "cmake-native"
 
 S = "${WORKDIR}/git/mjpg-streamer-experimental"
@@ -19,6 +19,7 @@ EXTRA_OECMAKE = " \
     -DPLUGIN_INPUT_UVC=ON \
     -DPLUGIN_OUTPUT_HTTP=ON \
     -DPLUGIN_OUTPUT_VIEWER=ON \
+    -DSDL2_DIR=${STAGING_LIBDIR}/cmake/SDL2 \
 "
 
 do_install() {
