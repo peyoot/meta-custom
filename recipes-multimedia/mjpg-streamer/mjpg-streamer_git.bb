@@ -27,10 +27,14 @@ EXTRA_OECMAKE:append:ccimx9 = " \
     -DCMAKE_C_FLAGS='-O3 -mcpu=cortex-a55 -march=armv8.2-a+simd' \
 "
 
-EXTRA_OECMAKE:append:stm32mp25x = " \
-  -DCMAKE_C_FLAGS='-O3 -mcpu=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard -mtune=cortex-a35' \
-  -DCMAKE_SYSTEM_PROCESSOR=armv8-a \
+EXTRA_OECMAKE:append:ccmp25 = " \
+    -DENABLE_NEON=ON \
+    -DSDL2_OPENGLES=ON \
+    -DJPEG_TURBO_WITH_NEON=ON \
+    -DCMAKE_C_FLAGS='-O3 -mcpu=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard' \
 "
+
+PACKAGECONFIG:append = " sdl2-opengles neon"
 
 do_install() {
     install -d -m 0755 "${D}${bindir}"
