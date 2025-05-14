@@ -23,14 +23,13 @@ EXTRA_OECMAKE = " \
     -DSDL2_DIR=${STAGING_LIBDIR}/cmake/SDL2 \
 "
 
-# 添加针对i.MX93的优化
-EXTRA_OECMAKE:append:mx93-nxp-bsp = " \
-    -DCMAKE_C_FLAGS='-O3 -mcpu=cortex-a55 -mfpu=neon -mfloat-abi=hard' \
+EXTRA_OECMAKE:append:ccimx9 = " \
+    -DCMAKE_C_FLAGS='-O3 -mcpu=cortex-a55 -march=armv8.2-a+simd' \
 "
 
-# 添加针对STM32MP25的优化
 EXTRA_OECMAKE:append:stm32mp25x = " \
-    -DCMAKE_C_FLAGS='-O3 -mcpu=cortex-a35 -mfpu=neon-vfpv4' \
+  -DCMAKE_C_FLAGS='-O3 -mcpu=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard -mtune=cortex-a35' \
+  -DCMAKE_SYSTEM_PROCESSOR=armv8-a \
 "
 
 do_install() {
