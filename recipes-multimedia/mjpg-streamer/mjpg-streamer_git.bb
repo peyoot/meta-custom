@@ -8,8 +8,7 @@ SRC_URI = " \
 
 SRCREV = "${AUTOREV}"
 
-DEPENDS = "jpeg libv4l libsdl2 libjpeg-turbo virtual/egl virtual/libgles2"
-DEPENDS += "cmake-native"
+DEPENDS = "jpeg libv4l libsdl2 libjpeg-turbo virtual/egl virtual/libgles2 cmake-native"
 
 S = "${WORKDIR}/git/mjpg-streamer-experimental"
 
@@ -19,22 +18,20 @@ EXTRA_OECMAKE = " \
     -DPLUGIN_INPUT_UVC=ON \
     -DPLUGIN_OUTPUT_HTTP=ON \
     -DPLUGIN_OUTPUT_VIEWER=ON \
-    -DENABLE_TURBOJPEG=ON \
     -DSDL2_DIR=${STAGING_LIBDIR}/cmake/SDL2 \
+    -DCMAKE_DISABLE_FIND_PACKAGE_TurboJPEG=ON \  
+    -DENABLE_TURBOJPEG=OFF \                     
+    -DWITH_TURBOJPEG=ON \                     
 "
-
 EXTRA_OECMAKE:append:ccimx9 = " \
-    -DCMAKE_C_FLAGS='-O3 -mcpu=cortex-a55 -march=armv8.2-a+simd' \
+    -DCMAKE_C_FLAGS='-O3 -mcpu=cortex-a55' \
 "
 
 EXTRA_OECMAKE:append:ccmp25 = " \
-    -DENABLE_NEON=ON \
-    -DSDL2_OPENGLES=ON \
-    -DJPEG_TURBO_WITH_NEON=ON \
     -DCMAKE_C_FLAGS='-O3 -mcpu=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard' \
 "
 
-PACKAGECONFIG:append = " sdl2-opengles neon"
+PACKAGECONFIG:remove = "sdl2-opengles neon"
 
 do_install() {
     install -d -m 0755 "${D}${bindir}"
