@@ -27,10 +27,8 @@ EXTRA_OECMAKE:append:ccimx9 = " \
 "
 
 EXTRA_OECMAKE:append:ccmp25 = " \
-    -DCMAKE_C_FLAGS='-O3 -mcpu=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard' \
+    -DCMAKE_C_FLAGS='-O3 -mcpu=cortex-a35' \
 "
-
-PACKAGECONFIG:remove = "sdl2-opengles neon"
 
 do_install() {
     install -d -m 0755 "${D}${bindir}"
