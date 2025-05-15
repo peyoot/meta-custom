@@ -18,8 +18,7 @@ EXTRA_OECMAKE = " \
     -DPLUGIN_INPUT_UVC=ON \
     -DPLUGIN_OUTPUT_HTTP=ON \
     -DPLUGIN_OUTPUT_VIEWER=ON \
-    -DSDL2_DIR=${STAGING_LIBDIR}/cmake/SDL2 \
-    -DCMAKE_DISABLE_FIND_PACKAGE_TurboJPEG=ON \                      
+    -DSDL2_DIR=${STAGING_LIBDIR}/cmake/SDL2 \                     
     -DWITH_TURBOJPEG=ON \                     
 "
 EXTRA_OECMAKE:append:ccimx9 = " -DPLATFORM_ARCH=cortex-a55 "
