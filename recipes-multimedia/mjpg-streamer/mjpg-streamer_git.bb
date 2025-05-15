@@ -22,13 +22,8 @@ EXTRA_OECMAKE = " \
     -DCMAKE_DISABLE_FIND_PACKAGE_TurboJPEG=ON \                      
     -DWITH_TURBOJPEG=ON \                     
 "
-EXTRA_OECMAKE:append:ccimx9 = " \
-    -DCMAKE_C_FLAGS='-O3 -mcpu=cortex-a55' \
-"
-
-EXTRA_OECMAKE:append:ccmp25 = " \
-    -DCMAKE_C_FLAGS='-O3 -mcpu=cortex-a35' \
-"
+EXTRA_OECMAKE:append:ccimx9 = " -DPLATFORM_ARCH=cortex-a55 "
+EXTRA_OECMAKE:append:ccmp25 = " -DPLATFORM_ARCH=cortex-a35 "
 
 do_install() {
     install -d -m 0755 "${D}${bindir}"
