@@ -19,8 +19,7 @@ EXTRA_OECMAKE = " \
     -DPLUGIN_OUTPUT_HTTP=ON \
     -DPLUGIN_OUTPUT_VIEWER=ON \
     -DSDL2_DIR=${STAGING_LIBDIR}/cmake/SDL2 \
-    -DCMAKE_DISABLE_FIND_PACKAGE_TurboJPEG=ON \  
-    -DENABLE_TURBOJPEG=OFF \                     
+    -DCMAKE_DISABLE_FIND_PACKAGE_TurboJPEG=ON \                      
     -DWITH_TURBOJPEG=ON \                     
 "
 EXTRA_OECMAKE:append:ccimx9 = " \
