@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/http_camera_demo.sh
+ExecStart=/usr/bin/http_camera_demo
 Restart=on-failure
 RestartSec=5
 KillMode=process
