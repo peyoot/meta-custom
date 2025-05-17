@@ -8,7 +8,7 @@ SRC_URI = " \
 
 SRCREV = "${AUTOREV}"
 
-DEPENDS = "jpeg libv4l libsdl2 libjpeg-turbo virtual/egl virtual/libgles2 cmake-native"
+DEPENDS = "jpeg libv4l gstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad wayland wayland-protocols cmake-native"
 
 S = "${WORKDIR}/git/mjpg-streamer-experimental"
 
@@ -17,9 +17,8 @@ inherit cmake pkgconfig
 EXTRA_OECMAKE = " \
     -DPLUGIN_INPUT_UVC=ON \
     -DPLUGIN_OUTPUT_HTTP=ON \
-    -DPLUGIN_OUTPUT_VIEWER=ON \
-    -DSDL2_DIR=${STAGING_LIBDIR}/cmake/SDL2 \                     
-    -DWITH_TURBOJPEG=ON \                     
+    -DPLUGIN_OUTPUT_VIEWER=ON \                  
+    -DWITH_GSTREAMER=ON \                  
 "
 EXTRA_OECMAKE:append:ccimx9 = " -DPLATFORM_ARCH=cortex-a55 "
 EXTRA_OECMAKE:append:ccmp25 = " -DPLATFORM_ARCH=cortex-a35 "
