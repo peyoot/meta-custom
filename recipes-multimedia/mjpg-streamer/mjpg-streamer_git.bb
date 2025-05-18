@@ -8,7 +8,7 @@ SRC_URI = " \
 
 SRCREV = "${AUTOREV}"
 
-DEPENDS = "jpeg libjpeg-turbo libv4l gstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad wayland wayland-protocols virtual/egl virtual/libgles2 cmake-native"
+DEPENDS = "jpeg libjpeg-turbo libjpeg-turbo-native libv4l gstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad wayland wayland-protocols virtual/egl virtual/libgles2 cmake-native"
 
 S = "${WORKDIR}/git/mjpg-streamer-experimental"
 
