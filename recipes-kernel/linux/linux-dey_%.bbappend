@@ -17,28 +17,48 @@ do_patch:append() {
     bb.build.exec_func('install_dts', d)
 }
 
+DT_FILES = " \
+    ccmp25-plc.dts \
+    ccmp25-plc_pwm_do1.dtso \
+    ccmp25-plc_pwm_do2.dtso \
+"
+
 # 定义一个 Python 函数来执行安装命令
 python install_dts() {
     import os
     import subprocess
 
-    dts_src = os.path.join(d.getVar('WORKDIR', True), 'ccmp25_dt/ccmp25-plc.dts')
+    workdir = d.getVar('WORKDIR', True)
     kernel_src = d.getVar('S', True)
-    dts_dest = os.path.join(kernel_src, 'arch/arm64/boot/dts/digi/ccmp25-plc.dts')
+    dest_dir = os.path.join(kernel_src, 'arch/arm64/boot/dts/digi')
 
-    subprocess.run(['install', '-D', '-m', '644', dts_src, dts_dest], check=True)
+    for filename in d.getVar('DT_FILES', True).split():
+        src = os.path.join(workdir, 'ccmp25_dt', filename)
+        dest = os.path.join(dest_dir, filename)
+        
+        # 创建目标目录并安装文件
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        subprocess.run(['install', '-D', '-m', '644', src, dest], check=True)
+
 }
 
-
-# 为 ccmp25-dvk 机器添加自定义设备树二进制文件
-STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += "ccmp25-plc.dtb"
-#KERNEL_DEVICETREE += "ccmp25-plc.dtb"
+# 为 ccmp25-dvk机器添加设备树和 overlay
+STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
+    ccmp25-plc.dtb \
+    ccmp25-plc_pwm_do1.dtbo \
+    ccmp25-plc_pwm_do2.dtbo \
+"
 
 do_install:prepend:ccmp2() {
 #    echo "KERNEL_DEVICETREE: ${KERNEL_DEVICETREE}"  and check log when perform bitbake -D -v linux-dey
     if [ -d "${B}/arch/${ARCH}/boot/dts/digi" ]; then
         for dtbf in ${KERNEL_DEVICETREE}; do
             install -m 0644 "${B}/arch/${ARCH}/boot/dts/digi/${dtbf}" "${B}/arch/${ARCH}/boot/dts/"
+        done
+        for dtbo in ccmp25-plc_pwm_do1.dtbo ccmp25-plc_pwm_do2.dtbo; do
+            if [ -f "${B}/arch/${ARCH}/boot/dts/digi/${dtbo}" ]; then
+                install -m 0644 "${B}/arch/${ARCH}/boot/dts/digi/${dtbo}" "${B}/arch/${ARCH}/boot/dts/"
+            fi
         done
     fi
 }
