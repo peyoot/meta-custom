@@ -3,9 +3,11 @@
 
 ### 可配置参数（直接修改这里）###
 CLOSE_OTHER_WEB="yes"      # 是否关闭占用端口的web服务（yes/no）
+WIDTH_PRIORITY=(800 1024 1280 640)  # 宽度优先级列表
+DEFAULT_RES="640x480"               # 保底分辨率
 TARGET_WIDTH=800           # 期望宽度
 TARGET_HEIGHT=600          # 期望高度
-FRAMERATE=30               # 帧率设置
+FRAMERATE=15               # 帧率设置
 DEFAULT_PORT=80            # 首选端口
 ALT_PORT_START=8080        # 备用端口起始
 MAX_PORT_TRY=3             # 最大端口尝试次数
@@ -37,15 +39,69 @@ fi
 ### 硬件检测函数 ###
 detect_usb_device() {
     v4l2-ctl --list-devices | awk '
-        /USB Camera/ {
-            usb_cam=1
-            next
+        !/^[[:space:]]*\/dev\/video[0-9]+/ && !/^$/ {
+            desc = tolower($0)
+            if ((desc ~ /camera/ && desc ~ /usb/) || (desc ~ /lrcp/ && desc ~ /usb/)) {
+                matched = 1
+                next
+            }
         }
-        usb_cam && /\/dev\/video[0-9]+/ {
+        matched && /^[[:space:]]*\/dev\/video[0-9]+/ {
             print $1
             exit
         }
-        /^$/ { usb_cam=0 }
+        /^$/ { matched = 0 }
+    '
+}
+
+### 分辨率选择函数 ###
+select_resolution() {
+    local dev=$1
+    v4l2-ctl -d $dev --list-formats-ext | awk -v widths="${WIDTH_PRIORITY[*]}" \
+        -v default="$DEFAULT_RES" \
+        -v framerate="$FRAMERATE" '
+        BEGIN {
+            split(widths, width_pri, " ")  # 解析优先级列表
+            best_res = default
+            best_fmt = "unknown"
+            delete candidates
+        }
+
+        # 提取像素格式
+        /^[[:space:]]*\[[0-9]+\]:/ {
+            split($2, tmp, "'\''")
+            current_fmt = tmp[2]
+        }
+
+        # 提取分辨率
+        /Size: Discrete/ {
+            split($3, res, /x/)
+            current_w = res[1] + 0
+            current_h = res[2] + 0
+        }
+
+        # 处理帧率
+        /Interval: Discrete.*\([0-9]+\.[0-9]+.*fps\)/ {
+            if (current_fmt == "MJPG" && current_w) {
+                split($(NF-1), fps_arr, /\(|\)/)
+                current_fps = fps_arr[2] + 0
+                if (current_fps >= framerate) {
+                    candidates[current_w] = current_w "x" current_h
+                }
+            }
+        }
+
+        END {
+            for (i = 1; i <= length(width_pri); i++) {
+                target_w = width_pri[i] + 0
+                if (target_w in candidates) {
+                    best_res = candidates[target_w]
+                    best_fmt = "MJPG"
+                    break
+                }
+            }
+            print best_fmt " " best_res
+        }
     '
 }
 
@@ -98,10 +154,27 @@ done
     exit 2
 }
 
+
+# 获取最佳分辨率配置
+IFS=' ' read -r pixel_format resolution < <(select_resolution $CAM_DEVICE)
+
+# 解析分辨率
+IFS='x' read -r width height <<< "$resolution"
+
+echo "[INFO] 选定配置：格式=${pixel_format} 分辨率=${width}x${height} 帧率=${FRAMERATE}"
+
 # 配置摄像头参数
-v4l2-ctl -d $CAM_DEVICE \
-    --set-fmt-video=pixelformat=MJPG \
-    --set-parm=$FRAMERATE
+if [ "$pixel_format" != "unknown" ]; then
+    v4l2-ctl -d $CAM_DEVICE \
+        --set-fmt-video=width=$width,height=$height,pixelformat=$pixel_format \
+        --set-parm=$FRAMERATE
+else
+    echo "[WARNING] 未找到满足条件的分辨率，使用默认配置"
+    IFS='x' read -r width height <<< "$DEFAULT_RES"
+    v4l2-ctl -d $CAM_DEVICE \
+        --set-fmt-video=width=$width,height=$height,pixelformat=MJPG \
+        --set-parm=$FRAMERATE
+fi
 
 # 启动服务
 echo "启动视频流服务：$USABLE_PORT端口，分辨率自动适配"
