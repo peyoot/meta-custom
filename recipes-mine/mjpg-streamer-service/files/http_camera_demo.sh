@@ -41,7 +41,7 @@ detect_usb_device() {
     v4l2-ctl --list-devices | awk '
         !/^[[:space:]]*\/dev\/video[0-9]+/ && !/^$/ {
             desc = tolower($0)
-            if ((desc ~ /camera/ && desc ~ /usb/) || (desc ~ /lrcp/ && desc ~ /usb/)) {
+            if ((desc ~ /cam/ && desc ~ /usb/) || (desc ~ /lrcp/ && desc ~ /usb/)) {
                 matched = 1
                 next
             }
@@ -81,7 +81,7 @@ select_resolution() {
         }
 
         # 处理帧率
-        /Interval: Discrete.*\([0-9]+\.[0-9]+.*fps\)/ {
+        /Interval: Discrete.*\([0-9]+\.[0-9]+[0-9]* fps\)/ {
             if (current_fmt == "MJPG" && current_w) {
                 split($(NF-1), fps_arr, /\(|\)/)
                 current_fps = fps_arr[2] + 0
@@ -104,6 +104,7 @@ select_resolution() {
         }
     '
 }
+
 
 ### 端口管理增强函数 ###
 manage_port() {
