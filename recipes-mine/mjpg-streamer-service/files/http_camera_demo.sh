@@ -180,6 +180,6 @@ fi
 # 启动服务
 echo "启动视频流服务：$USABLE_PORT端口，分辨率自动适配"
 exec mjpg_streamer \
-  -i "input_uvc.so -d $CAM_DEVICE -f $FRAMERATE" \
+  -i "input_uvc.so -d $CAM_DEVICE -r ${width}x${height} -f $FRAMERATE" \
   -o "output_http.so -p $USABLE_PORT -w /srv/mjpg_streamer/www"
 
