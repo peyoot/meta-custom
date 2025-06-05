@@ -12,7 +12,7 @@ SRC_URI:append:ccimx9 = " \
 "
 
 SRC_URI:append:stm32mpcommon = " 
-file://stm32mpcommon/defconfig 
+file://stm32mpcommon/defconfig \
 "
 
 do_configure:append:stm32mpcommon() {
