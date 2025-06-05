@@ -1,5 +1,5 @@
 # 路径扩展（通用 + ccimx9 覆盖）
-FILESEXTRAPATHS:prepend := "${THISDIR}/${BP}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${BPN}:"
 
 # 通用文件（所有机型）
 SRC_URI:append = " \
@@ -10,6 +10,15 @@ SRC_URI:append = " \
 SRC_URI:append:ccimx9 = " \
     file://acs-hostapd_uap0.conf \
 "
+
+SRC_URI:append:stm32mpcommon = " 
+file://stm32mpcommon/defconfig 
+"
+
+do_configure:append:stm32mpcommon() {
+    bbnote "Using custom defconfig from ${WORKDIR}/stm32mpcommon/defconfig"
+    install -m 0644 ${WORKDIR}/stm32mpcommon/defconfig ${S}/hostapd/.config 
+}
 
 # 通用安装步骤（非 ccimx9 机型）
 do_install:append() {
