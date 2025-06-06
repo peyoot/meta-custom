@@ -1,11 +1,6 @@
 # 路径扩展（通用 + ccimx9 覆盖）
 FILESEXTRAPATHS:prepend := "${THISDIR}/${BPN}:"
 
-# 通用文件（所有机型）
-SRC_URI:append = " \
-    file://acs-hostapd_wlan1.conf \
-"
-
 # ccimx9 专用文件（通过 MACHINEOVERRIDES 触发）
 SRC_URI:append:ccimx9 = " \
     file://acs-hostapd_uap0.conf \
@@ -13,6 +8,7 @@ SRC_URI:append:ccimx9 = " \
 
 SRC_URI:append:stm32mpcommon =  " \
     file://stm32mpcommon/defconfig  \
+    file://acs-hostapd_wlan1.conf \
 "
 
 do_configure:append:stm32mpcommon() {
