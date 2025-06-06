@@ -11,8 +11,8 @@ SRC_URI:append:ccimx9 = " \
     file://acs-hostapd_uap0.conf \
 "
 
-SRC_URI:append:stm32mpcommon = " 
-file://stm32mpcommon/defconfig \
+SRC_URI:append:stm32mpcommon =  " \
+    file://stm32mpcommon/defconfig  \
 "
 
 do_configure:append:stm32mpcommon() {
