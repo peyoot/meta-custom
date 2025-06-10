@@ -21,7 +21,7 @@ do_install:append:stm32mpcommon() {
 	# Install custom hostapd_IFACE.conf files
 	if ${HAS_WIFI_VIRTWLANS}; then
 		# Install custom hostapd_IFACE.conf file
-		install -m 0644 ${WORKDIR}/hostapd_wlan1.conf ${D}${sysconfdir}
+		install -m 0644 ${WORKDIR}/stm32mpcommon/hostapd_wlan1.conf ${D}${sysconfdir}
 	fi
 }
 
