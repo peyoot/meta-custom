@@ -16,6 +16,8 @@ inherit cmake pkgconfig
 
 EXTRA_OECMAKE = " \
     -DPLUGIN_INPUT_UVC=ON \
+    -DPLUGIN_INPUT_OPENCV=ON \
+    -DPLUGIN_INPUT_RASPICAM=ON \
     -DPLUGIN_OUTPUT_HTTP=ON \
     -DPLUGIN_OUTPUT_VIEWER=ON \                  
     -DWITH_GSTREAMER=ON \                  
