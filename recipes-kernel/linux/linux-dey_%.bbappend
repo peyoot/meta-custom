@@ -20,6 +20,7 @@ do_patch:append() {
 DT_FILES = " \
     ccmp25-plc.dts \
     ccmp25-plc_pwm_do1_2.dtso \
+    ccmp25-plc_fix_eth2_100m.dtso \
 "
 
 # 定义一个 Python 函数来执行安装命令
@@ -45,6 +46,7 @@ python install_dts() {
 STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
     ccmp25-plc.dtb \
     ccmp25-plc_pwm_do1_2.dtbo \
+    ccmp25-plc_fix_eth2_100m.dtso \
 "
 
 do_install:prepend:ccmp2() {
