@@ -51,14 +51,10 @@ STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
 
 do_install:prepend:ccmp2() {
 #    echo "KERNEL_DEVICETREE: ${KERNEL_DEVICETREE}"  and check log when perform bitbake -D -v linux-dey
+    echo "KERNEL_DEVICETREE: ${KERNEL_DEVICETREE}"
     if [ -d "${B}/arch/${ARCH}/boot/dts/digi" ]; then
         for dtbf in ${KERNEL_DEVICETREE}; do
             install -m 0644 "${B}/arch/${ARCH}/boot/dts/digi/${dtbf}" "${B}/arch/${ARCH}/boot/dts/"
-        done
-        for dtbo in ccmp25-plc_pwm_do1.dtbo ccmp25-plc_pwm_do2.dtbo; do
-            if [ -f "${B}/arch/${ARCH}/boot/dts/digi/${dtbo}" ]; then
-                install -m 0644 "${B}/arch/${ARCH}/boot/dts/digi/${dtbo}" "${B}/arch/${ARCH}/boot/dts/"
-            fi
         done
     fi
 }
