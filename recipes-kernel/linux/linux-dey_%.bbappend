@@ -46,7 +46,7 @@ python install_dts() {
 STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
     ccmp25-plc.dtb \
     ccmp25-plc_pwm_do1_2.dtbo \
-    ccmp25-plc_fix_eth2_100m.dtso \
+    ccmp25-plc_fix_eth2_100m.dtbo \
 "
 
 do_install:prepend:ccmp2() {
