@@ -3,7 +3,7 @@ auto wlan1
 iface wlan1 inet static
        address ##WLAN1_STATIC_IP##
        netmask ##WLAN1_STATIC_NETMASK##
-       pre-up [ -d /proc/device-tree/wireless ] && REGION=$(fw_printenv -n region_code 2>/dev/null || echo US) && wl country $REGION
+       pre-up [ -d /proc/device-tree/wireless ] && REGION=$(fw_printenv -n region_code 2>/dev/null); REGION=${REGION:-US} && { wl country $REGION 2>/dev/null || iw reg set $REGION; }
        post-up ##WLAN1_POST_UP_ACTION##
        post-up udhcpd /etc/udhcpd.conf
        pre-down ##WLAN1_PRE_DOWN_ACTION##
