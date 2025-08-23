@@ -1,0 +1,213 @@
+# Example hostapd build time configuration
+#
+# This file lists the configuration options that are used when building the
+# hostapd binary. All lines starting with # are ignored. Configuration option
+# lines must be commented out complete, if they are not to be included, i.e.,
+# just setting VARIABLE=n is not disabling that variable.
+#
+# This file is included in Makefile, so variables like CFLAGS and LIBS can also
+# be modified from here. In most cass, these lines should use += in order not
+# to override previous values of the variables.
+
+# Driver interface for Host AP driver
+CONFIG_DRIVER_HOSTAP=y
+
+# Driver interface for wired authenticator
+#CONFIG_DRIVER_WIRED=y
+
+# Driver interface for drivers using the nl80211 kernel interface
+CONFIG_DRIVER_NL80211=y
+
+# QCA vendor extensions to nl80211
+#CONFIG_DRIVER_NL80211_QCA=y
+
+# driver_nl80211.c requires libnl. If you are compiling it yourself
+# you may need to point hostapd to your version of libnl.
+#
+#CFLAGS += -I$<path to libnl include files>
+#LIBS += -L$<path to libnl library files>
+
+# Use libnl v2.0 (or 3.0) libraries.
+#CONFIG_LIBNL20=y
+
+# Use libnl 3.2 libraries (if this is selected, CONFIG_LIBNL20 is ignored)
+CONFIG_LIBNL32=y
+
+
+# Driver interface for FreeBSD net80211 layer (e.g., Atheros driver)
+#CONFIG_DRIVER_BSD=y
+#CFLAGS += -I/usr/local/include
+#LIBS += -L/usr/local/lib
+#LIBS_p += -L/usr/local/lib
+#LIBS_c += -L/usr/local/lib
+
+# Driver interface for no driver (e.g., RADIUS server only)
+#CONFIG_DRIVER_NONE=y
+
+# WPA2/IEEE 802.11i RSN pre-authentication
+CONFIG_RSN_PREAUTH=y
+
+# Support Operating Channel Validation
+#CONFIG_OCV=y
+
+# Integrated EAP server
+CONFIG_EAP=y
+
+# EAP Re-authentication Protocol (ERP) in integrated EAP server
+CONFIG_ERP=y
+
+# EAP-MD5 for the integrated EAP server
+CONFIG_EAP_MD5=y
+
+# EAP-TLS for the integrated EAP server
+CONFIG_EAP_TLS=y
+
+# EAP-MSCHAPv2 for the integrated EAP server
+CONFIG_EAP_MSCHAPV2=y
+
+# EAP-PEAP for the integrated EAP server
+CONFIG_EAP_PEAP=y
+
+# EAP-GTC for the integrated EAP server
+CONFIG_EAP_GTC=y
+
+# EAP-TTLS for the integrated EAP server
+CONFIG_EAP_TTLS=y
+#CONFIG_TLSV12=y
+
+# Select which ciphers to use by default with OpenSSL if the user does not
+# specify them.
+#CONFIG_TLS_DEFAULT_CIPHERS="DEFAULT:!EXP:!LOW"
+
+# If CONFIG_TLS=internal is used, additional library and include paths are
+# needed for LibTomMath. Alternatively, an integrated, minimal version of
+# LibTomMath can be used. See beginning of libtommath.c for details on benefits
+# and drawbacks of this option.
+#CONFIG_INTERNAL_LIBTOMMATH=y
+#ifndef CONFIG_INTERNAL_LIBTOMMATH
+#LTM_PATH=/usr/src/libtommath-0.39
+#CFLAGS += -I$(LTM_PATH)
+#LIBS += -L$(LTM_PATH)
+#LIBS_p += -L$(LTM_PATH)
+#endif
+# At the cost of about 4 kB of additional binary size, the internal LibTomMath
+# can be configured to include faster routines for exptmod, sqr, and div to
+# speed up DH and RSA calculation considerably
+#CONFIG_INTERNAL_LIBTOMMATH_FAST=y
+
+# Interworking (IEEE 802.11u)
+# This can be used to enable functionality to improve interworking with
+# external networks.
+#CONFIG_INTERWORKING=y
+
+# Hotspot 2.0
+#CONFIG_HS20=y
+
+# Enable SQLite database support in hlr_auc_gw, EAP-SIM DB, and eap_user_file
+#CONFIG_SQLITE=y
+
+# Enable Fast Session Transfer (FST)
+#CONFIG_FST=y
+
+# Enable CLI commands for FST testing
+#CONFIG_FST_TEST=y
+
+# Testing options
+# This can be used to enable some testing options (see also the example
+# configuration file) that are really useful only for testing clients that
+# connect to this hostapd. These options allow, for example, to drop a
+# certain percentage of probe requests or auth/(re)assoc frames.
+#
+#CONFIG_TESTING_OPTIONS=y
+
+# Automatic Channel Selection
+# This will allow hostapd to pick the channel automatically when channel is set
+# to "acs_survey" or "0". Eventually, other ACS algorithms can be added in
+# similar way.
+#
+# Automatic selection is currently only done through initialization, later on
+# we hope to do background checks to keep us moving to more ideal channels as
+# time goes by. ACS is currently only supported through the nl80211 driver and
+# your driver must have survey dump capability that is filled by the driver
+# during scanning.
+#
+# You can customize the ACS survey algorithm with the hostapd.conf variable
+# acs_num_scans.
+#
+# Supported ACS drivers:
+# * ath9k
+# * ath5k
+# * ath10k
+#
+# For more details refer to:
+# https://wireless.wiki.kernel.org/en/users/documentation/acs
+#
+CONFIG_ACS=y
+
+# Multiband Operation support
+# These extensions facilitate efficient use of multiple frequency bands
+# available to the AP and the devices that may associate with it.
+#CONFIG_MBO=y
+
+# Client Taxonomy
+# Has the AP retain the Probe Request and (Re)Association Request frames from
+# a client, from which a signature can be produced which can identify the model
+# of client device like "Nexus 6P" or "iPhone 5s".
+#CONFIG_TAXONOMY=y
+
+# Fast Initial Link Setup (FILS) (IEEE 802.11ai)
+#CONFIG_FILS=y
+# FILS shared key authentication with PFS
+#CONFIG_FILS_SK_PFS=y
+
+# Include internal line edit mode in hostapd_cli. This can be used to provide
+# limited command line editing and history support.
+#CONFIG_WPA_CLI_EDIT=y
+
+# Opportunistic Wireless Encryption (OWE)
+# Experimental implementation of draft-harkins-owe-07.txt
+#CONFIG_OWE=y
+
+# Airtime policy support
+#CONFIG_AIRTIME_POLICY=y
+
+# Override default value for the wpa_disable_eapol_key_retries configuration
+# parameter. See that parameter in hostapd.conf for more details.
+#CFLAGS += -DDEFAULT_WPA_DISABLE_EAPOL_KEY_RETRIES=1
+
+# Wired equivalent privacy (WEP)
+# WEP is an obsolete cryptographic data confidentiality algorithm that is not
+# considered secure. It should not be used for anything anymore. The
+# functionality needed to use WEP is available in the current hostapd
+# release under this optional build parameter. This functionality is subject to
+# be completely removed in a future release.
+#CONFIG_WEP=y
+
+# Remove all TKIP functionality
+# TKIP is an old cryptographic data confidentiality algorithm that is not
+# considered secure. It should not be used anymore. For now, the default hostapd
+# build includes this to allow mixed mode WPA+WPA2 networks to be enabled, but
+# that functionality is subject to be removed in the future.
+#CONFIG_NO_TKIP=y
+
+# Pre-Association Security Negotiation (PASN)
+# Experimental implementation based on IEEE P802.11z/D2.6 and the protocol
+# design is still subject to change. As such, this should not yet be enabled in
+# production use.
+# This requires CONFIG_IEEE80211W=y to be enabled, too.
+#CONFIG_PASN=y
+
+# Device Provisioning Protocol (DPP) (also known as Wi-Fi Easy Connect)
+CONFIG_DPP=y
+# DPP version 2 support
+CONFIG_DPP2=y
+# DPP version 3 support (experimental and still changing; do not enable for
+# production use)
+#CONFIG_DPP3=y
+
+
+# CUSTOM CONFIG
+CONFIG_SAE=y
+CONFIG_SAE_PK=y
+CONFIG_SUITEB=y
+CONFIG_SUITEB192=y
