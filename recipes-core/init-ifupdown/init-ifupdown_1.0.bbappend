@@ -11,11 +11,10 @@ SRC_URI:append = " \
 SRC_URI:append:ccimx9 = " \
     file://ccimx9/udhcpd.conf \
     file://ccimx9/udhcpd.service \
-    file://ccimx9/set-regdomain.service \
 "
 
 SYSTEMD_SERVICE:${PN} += "udhcpd.service"
-SYSTEMD_SERVICE:${PN}:append:ccimx9 = " set-regdomain.service"
+
 
 # 通用安装步骤（非 ccimx9 机型）
 do_install:append() {
@@ -29,6 +28,5 @@ do_install:append:ccimx9() {
     install -m 0644 ${WORKDIR}/ccimx9/udhcpd.conf ${D}${sysconfdir}/udhcpd.conf
     install -d ${D}${systemd_system_unitdir}
     install -m 0644 ${WORKDIR}/ccimx9/udhcpd.service ${D}${systemd_system_unitdir}/
-    install -m 0644 ${WORKDIR}/ccimx9/set-regdomain.service ${D}${systemd_system_unitdir}/
 }
 
