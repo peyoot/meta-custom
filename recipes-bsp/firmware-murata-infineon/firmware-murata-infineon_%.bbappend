@@ -7,7 +7,7 @@ SRC_URI += " \
 SRCREV_cyw-fmac-utils-imx64-old = "1bc78d68f9609290b2f6578516011c57691f7815"
 
 # 更新 SRCREV_FORMAT 以包含新的源码项
-SRCREV_FORMAT:append = "_cyw-fmac-utils-imx64-old"
+SRCREV_FORMAT:append = " _cyw-fmac-utils-imx64-old"
 
 # 修改 do_install 函数，追加安装旧版本 wl 工具的步骤
 do_install:append() {
