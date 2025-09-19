@@ -13,12 +13,12 @@ do_configure[noexec] = "1"
 do_compile[noexec] = "1" 
 do_install() {
         # creating the destination directories
-        install -d ${D}/home/root
+        install -d ${D}/root
         # extra files need to go in the respective directories
-        install -m 0644 ${WORKDIR}/.profile ${D}/home/root/
-        install -m 0644 ${WORKDIR}/readme.txt ${D}/home/root/
-        install -m 0755 ${WORKDIR}/wl_autochannel.sh ${D}/home/root/
+        install -m 0644 ${WORKDIR}/.profile ${D}/root/
+        install -m 0644 ${WORKDIR}/readme.txt ${D}/root/
+        install -m 0755 ${WORKDIR}/wl_autochannel.sh ${D}/root/
 }
 
-FILES:${PN} += "/home/root/* \
-        /home/root/.profile"
+FILES:${PN} += "/root/* \
+        /root/.profile"
