@@ -64,7 +64,7 @@ do_install () {
 	# Install WLAN client utility binary based on 32-bit/64-bit arch
 	if [ ${TARGET_ARCH} = "aarch64" ]; then
 		install -m 755 ${S}/cyw-fmac-utils-imx64/wl ${D}${sbindir}
-		install -m 755 ${S}/cyw-fmac-utils-imx64-old/wl ${D}${sbindir}/wl-1bc78d6
+		install -m 755 ${S}/cyw-fmac-utils-imx64-old/wl ${D}${sbindir}/wl_1bc78d6
 	else
 		install -m 755 ${S}/cyw-fmac-utils-imx32/wl ${D}${sbindir}
 	fi
