@@ -6,8 +6,8 @@ SRC_URI:append = " \
 "
 
 # 指定自定义设备树仓库的提交哈希
-# SRCREV_ccmp25dt = "5e8bb050e57e3adbf433e74b4a0619de489b21f0"
-SRCREV_ccmp25dt =  "${AUTOREV}"
+SRCREV_ccmp25dt = "6925933fe3728d1a2d457793944989a822915f34"
+# SRCREV_ccmp25dt =  "${AUTOREV}"
 
 # 定义 SRCREV_FORMAT 以分离主内核仓库和自定义仓库的版本号
 SRCREV_FORMAT = "default_ccmp25dt" 
