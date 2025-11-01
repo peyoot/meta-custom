@@ -1,5 +1,12 @@
 # meta-custom/recipes-kernel/linux/linux-dey_%.bbappend
 
+FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+
+SRC_URI += " \
+    file://0001-add-ch343-usb-serial-driver.patch \
+    file://ch343.cfg \
+"
+
 # 添加自定义设备树仓库
 SRC_URI:append = " \
     git://github.com/peyoot/ccmp25_dt;branch=ccmp25plc;protocol=https;destsuffix=ccmp25_dt;name=ccmp25dt \
@@ -11,6 +18,13 @@ SRCREV_ccmp25dt = "6925933fe3728d1a2d457793944989a822915f34"
 
 # 定义 SRCREV_FORMAT 以分离主内核仓库和自定义仓库的版本号
 SRCREV_FORMAT = "default_ccmp25dt" 
+
+# 确保配置片段被应用
+do_configure_append() {
+    if [ -f ${WORKDIR}/ch343.cfg ]; then
+        cat ${WORKDIR}/ch343.cfg >> ${B}/.config
+    fi
+}
 
 # 追加 do_patch 任务以安装自定义 DTS 文件
 do_patch:append() {
