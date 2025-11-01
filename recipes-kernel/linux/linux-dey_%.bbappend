@@ -1,6 +1,6 @@
 # meta-custom/recipes-kernel/linux/linux-dey_%.bbappend
 
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += " \
     file://0001-add-ch343-usb-serial-driver.patch \
