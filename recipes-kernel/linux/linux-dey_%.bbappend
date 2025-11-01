@@ -20,7 +20,7 @@ SRCREV_ccmp25dt = "6925933fe3728d1a2d457793944989a822915f34"
 SRCREV_FORMAT = "default_ccmp25dt" 
 
 # 确保配置片段被应用
-do_configure_append() {
+do_configure:append() {
     if [ -f ${WORKDIR}/ch343.cfg ]; then
         cat ${WORKDIR}/ch343.cfg >> ${B}/.config
     fi
