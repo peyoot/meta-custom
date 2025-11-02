@@ -20,13 +20,12 @@ IMAGE_INSTALL:remove = "weston"
 IMAGE_INSTALL:remove = "weston-xwayland" 
 IMAGE_INSTALL:append = " \
     qt5everywheredemo \
-    xorg-xserver-xvfb \
+    xserver-xorg \
     x11vnc \
     xdpyinfo \
     xauth \
     libx11 \
     libxcb \
-    mesa-megadriver \
 "
 
 # 如果不需要Qt的Wayland支持，可以移除qtwayland，但这需要测试
