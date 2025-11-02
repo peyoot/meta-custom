@@ -20,7 +20,7 @@ IMAGE_INSTALL:remove = "weston"
 IMAGE_INSTALL:remove = "weston-xwayland" 
 IMAGE_INSTALL:append = " \
     qt5everywheredemo \
-    xserver-xorg \
+    xorg-xserver-xvfb \
     x11vnc \
     xdpyinfo \
     xauth \
