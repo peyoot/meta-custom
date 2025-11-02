@@ -1,12 +1,26 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 # 扩展 PACKAGECONFIG 以支持 X11
+# 根据 DISTRO_FEATURES 动态配置 Qt
 PACKAGECONFIG:append = " \
-    ${@bb.utils.contains('DISTRO_FEATURES', 'x11', 'xcb', '', d)} \
+    ${@bb.utils.contains('DISTRO_FEATURES', 'x11', 'xcb xkbcommon fontconfig', '', d)} \
+    ${@bb.utils.contains('DISTRO_FEATURES', 'opengl', 'opengl', '', d)} \
+    ${@bb.utils.contains('DISTRO_FEATURES', 'gles2', 'gles2 egl', '', d)} \
 "
 
+# 如果 wayland 被移除，确保 Qt 也不编译 wayland 支持
+PACKAGECONFIG:remove = "${@bb.utils.contains('DISTRO_FEATURES', 'wayland', '', 'wayland', d)}"
+
+# 编译标志
+QT_CONFIG_FLAGS += " \
+    -no-sse2 \
+    -no-opengles3 \
+    ${@bb.utils.contains('DISTRO_FEATURES', 'x11', '-xcb -xcb-xlib', '', d)} \
+"
+
+
 # 根据后端类型提供不同的配置
-QT_CONFIG_FLAGS += " -no-sse2 -no-opengles3"
+# QT_CONFIG_FLAGS += " -no-sse2 -no-opengles3"
 
 SRC_URI:append = " \
     ${@bb.utils.contains('DISTRO_FEATURES', 'x11', 'file://qt5-x11.sh', '', d)} \
