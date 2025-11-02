@@ -2,7 +2,7 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 # 扩展 PACKAGECONFIG 以支持 X11
 PACKAGECONFIG:append = " \
-    ${@bb.utils.contains('DISTRO_FEATURES', 'x11', 'x11 xcb xkbcommon-evdev', '', d)} \
+    ${@bb.utils.contains('DISTRO_FEATURES', 'x11', 'xcb', '', d)} \
 "
 
 # 根据后端类型提供不同的配置
