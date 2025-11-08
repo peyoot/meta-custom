@@ -3,8 +3,7 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += " \
-    file://0001-add-ch343-usb-serial-driver.patch \
-    file://ch343.cfg \
+    file://ov2740.cfg \
 "
 
 # 添加自定义设备树仓库
@@ -21,8 +20,8 @@ SRCREV_FORMAT = "default_ccmp25dt"
 
 # 确保配置片段被应用
 do_configure:append() {
-    if [ -f ${WORKDIR}/ch343.cfg ]; then
-        cat ${WORKDIR}/ch343.cfg >> ${B}/.config
+    if [ -f ${WORKDIR}/ov2740.cfg ]; then
+        cat ${WORKDIR}/ov2740.cfg >> ${B}/.config
     fi
 }
 
