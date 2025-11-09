@@ -131,7 +131,7 @@ FILES:${PN} = " \
 
 FILES:${PN}-mfgtest = " \
     ${sbindir}/wl \
-    ${sbindir}/wl-1bc78d6 \
+    ${sbindir}/wl_1bc78d6 \
 "
 
 FILES:${PN}-autocountry = " \
