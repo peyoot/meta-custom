@@ -1,0 +1,1680 @@
+From 78bc20a08547cc8049d2b764aac7b52f86bb504f Mon Sep 17 00:00:00 2001
+From: peyoot <peyoot@hotmail.com>
+Date: Wed, 3 Dec 2025 11:49:38 +0000
+Subject: [PATCH] update ov2740 driver with DTS and 24MHz clock support
+
+---
+ drivers/media/i2c/ov2740.c | 1213 +++++++++++++++---------------------
+ 1 file changed, 510 insertions(+), 703 deletions(-)
+
+diff --git a/drivers/media/i2c/ov2740.c b/drivers/media/i2c/ov2740.c
+index 41d4f85470fd..17e55739ea67 100644
+--- a/drivers/media/i2c/ov2740.c
++++ b/drivers/media/i2c/ov2740.c
+@@ -1,26 +1,30 @@
+ // SPDX-License-Identifier: GPL-2.0
+ // Copyright (c) 2020 Intel Corporation.
++// Modified for Device Tree only support
+ 
+-#include <asm/unaligned.h>
+-#include <linux/acpi.h>
+-#include <linux/delay.h>
++#include <linux/clk.h>
++#include <linux/device.h>
++#include <linux/gpio/consumer.h>
+ #include <linux/i2c.h>
+ #include <linux/module.h>
+ #include <linux/pm_runtime.h>
+-#include <linux/nvmem-provider.h>
+ #include <linux/regmap.h>
++#include <linux/regulator/consumer.h>
++
+ #include <media/v4l2-ctrls.h>
+ #include <media/v4l2-device.h>
+ #include <media/v4l2-fwnode.h>
++#include <media/v4l2-subdev.h>
++#include <media/v4l2-async.h>
+ 
+ #define OV2740_LINK_FREQ_360MHZ		360000000ULL
+ #define OV2740_SCLK			72000000LL
+-#define OV2740_MCLK			19200000
++#define OV2740_MCLK			24000000	/* 24MHz */
+ #define OV2740_DATA_LANES		2
+ #define OV2740_RGB_DEPTH		10
+ 
+ #define OV2740_REG_CHIP_ID		0x300a
+-#define OV2740_CHIP_ID			0x2740
++#define OV2740_CHIP_ID			0x002740UL
+ 
+ #define OV2740_REG_MODE_SELECT		0x0100
+ #define OV2740_MODE_STANDBY		0x00
+@@ -32,22 +36,19 @@
+ #define OV2740_VTS_MIN			0x0460
+ #define OV2740_VTS_MAX			0x7fff
+ 
+-/* horizontal-timings from sensor */
+-#define OV2740_REG_HTS			0x380c
+-
+-/* Exposure controls from sensor */
++/* Exposure controls */
+ #define OV2740_REG_EXPOSURE		0x3500
+ #define OV2740_EXPOSURE_MIN		4
+ #define OV2740_EXPOSURE_MAX_MARGIN	8
+ #define OV2740_EXPOSURE_STEP		1
+ 
+-/* Analog gain controls from sensor */
++/* Analog gain control */
+ #define OV2740_REG_ANALOG_GAIN		0x3508
+ #define OV2740_ANAL_GAIN_MIN		128
+ #define OV2740_ANAL_GAIN_MAX		1983
+ #define OV2740_ANAL_GAIN_STEP		1
+ 
+-/* Digital gain controls from sensor */
++/* Digital gain control */
+ #define OV2740_REG_MWB_R_GAIN		0x500a
+ #define OV2740_REG_MWB_G_GAIN		0x500c
+ #define OV2740_REG_MWB_B_GAIN		0x500e
+@@ -67,24 +68,9 @@
+ #define OV2740_GROUP_HOLD_END		0x10
+ #define OV2740_GROUP_HOLD_LAUNCH	0xa0
+ 
+-/* ISP CTRL00 */
+-#define OV2740_REG_ISP_CTRL00		0x5000
+-/* ISP CTRL01 */
+-#define OV2740_REG_ISP_CTRL01		0x5001
+-/* Customer Addresses: 0x7010 - 0x710F */
+-#define CUSTOMER_USE_OTP_SIZE		0x100
+-/* OTP registers from sensor */
+-#define OV2740_REG_OTP_CUSTOMER		0x7010
+-
+-struct nvm_data {
+-	struct nvmem_device *nvmem;
+-	struct regmap *regmap;
+-	char *nvm_buffer;
+-};
+-
+-enum {
+-	OV2740_LINK_FREQ_360MHZ_INDEX,
+-};
++static bool skip_id = false;
++module_param(skip_id, bool, 0644);
++MODULE_PARM_DESC(skip_id, "skip chip-id read for debug");
+ 
+ struct ov2740_reg {
+ 	u16 address;
+@@ -96,229 +82,21 @@ struct ov2740_reg_list {
+ 	const struct ov2740_reg *regs;
+ };
+ 
+-struct ov2740_link_freq_config {
+-	const struct ov2740_reg_list reg_list;
+-};
+-
+ struct ov2740_mode {
+-	/* Frame width in pixels */
+ 	u32 width;
+-
+-	/* Frame height in pixels */
+ 	u32 height;
+-
+-	/* Horizontal timining size */
+ 	u32 hts;
+-
+-	/* Default vertical timining size */
+ 	u32 vts_def;
+-
+-	/* Min vertical timining size */
+ 	u32 vts_min;
+-
+-	/* Link frequency needed for this resolution */
+ 	u32 link_freq_index;
+-
+-	/* Sensor register settings for this resolution */
+ 	const struct ov2740_reg_list reg_list;
+ };
+ 
+-static const struct ov2740_reg mipi_data_rate_720mbps[] = {
+-	{0x0103, 0x01},
+-	{0x0302, 0x4b},
+-	{0x030d, 0x4b},
+-	{0x030e, 0x02},
+-	{0x030a, 0x01},
+-	{0x0312, 0x11},
+-};
+-
+-static const struct ov2740_reg mode_1932x1092_regs[] = {
+-	{0x3000, 0x00},
+-	{0x3018, 0x32},
+-	{0x3031, 0x0a},
+-	{0x3080, 0x08},
+-	{0x3083, 0xB4},
+-	{0x3103, 0x00},
+-	{0x3104, 0x01},
+-	{0x3106, 0x01},
+-	{0x3500, 0x00},
+-	{0x3501, 0x44},
+-	{0x3502, 0x40},
+-	{0x3503, 0x88},
+-	{0x3507, 0x00},
+-	{0x3508, 0x00},
+-	{0x3509, 0x80},
+-	{0x350c, 0x00},
+-	{0x350d, 0x80},
+-	{0x3510, 0x00},
+-	{0x3511, 0x00},
+-	{0x3512, 0x20},
+-	{0x3632, 0x00},
+-	{0x3633, 0x10},
+-	{0x3634, 0x10},
+-	{0x3635, 0x10},
+-	{0x3645, 0x13},
+-	{0x3646, 0x81},
+-	{0x3636, 0x10},
+-	{0x3651, 0x0a},
+-	{0x3656, 0x02},
+-	{0x3659, 0x04},
+-	{0x365a, 0xda},
+-	{0x365b, 0xa2},
+-	{0x365c, 0x04},
+-	{0x365d, 0x1d},
+-	{0x365e, 0x1a},
+-	{0x3662, 0xd7},
+-	{0x3667, 0x78},
+-	{0x3669, 0x0a},
+-	{0x366a, 0x92},
+-	{0x3700, 0x54},
+-	{0x3702, 0x10},
+-	{0x3706, 0x42},
+-	{0x3709, 0x30},
+-	{0x370b, 0xc2},
+-	{0x3714, 0x63},
+-	{0x3715, 0x01},
+-	{0x3716, 0x00},
+-	{0x371a, 0x3e},
+-	{0x3732, 0x0e},
+-	{0x3733, 0x10},
+-	{0x375f, 0x0e},
+-	{0x3768, 0x30},
+-	{0x3769, 0x44},
+-	{0x376a, 0x22},
+-	{0x377b, 0x20},
+-	{0x377c, 0x00},
+-	{0x377d, 0x0c},
+-	{0x3798, 0x00},
+-	{0x37a1, 0x55},
+-	{0x37a8, 0x6d},
+-	{0x37c2, 0x04},
+-	{0x37c5, 0x00},
+-	{0x37c8, 0x00},
+-	{0x3800, 0x00},
+-	{0x3801, 0x00},
+-	{0x3802, 0x00},
+-	{0x3803, 0x00},
+-	{0x3804, 0x07},
+-	{0x3805, 0x8f},
+-	{0x3806, 0x04},
+-	{0x3807, 0x47},
+-	{0x3808, 0x07},
+-	{0x3809, 0x88},
+-	{0x380a, 0x04},
+-	{0x380b, 0x40},
+-	{0x380c, 0x04},
+-	{0x380d, 0x38},
+-	{0x380e, 0x04},
+-	{0x380f, 0x60},
+-	{0x3810, 0x00},
+-	{0x3811, 0x04},
+-	{0x3812, 0x00},
+-	{0x3813, 0x04},
+-	{0x3814, 0x01},
+-	{0x3815, 0x01},
+-	{0x3820, 0x80},
+-	{0x3821, 0x46},
+-	{0x3822, 0x84},
+-	{0x3829, 0x00},
+-	{0x382a, 0x01},
+-	{0x382b, 0x01},
+-	{0x3830, 0x04},
+-	{0x3836, 0x01},
+-	{0x3837, 0x08},
+-	{0x3839, 0x01},
+-	{0x383a, 0x00},
+-	{0x383b, 0x08},
+-	{0x383c, 0x00},
+-	{0x3f0b, 0x00},
+-	{0x4001, 0x20},
+-	{0x4009, 0x07},
+-	{0x4003, 0x10},
+-	{0x4010, 0xe0},
+-	{0x4016, 0x00},
+-	{0x4017, 0x10},
+-	{0x4044, 0x02},
+-	{0x4304, 0x08},
+-	{0x4307, 0x30},
+-	{0x4320, 0x80},
+-	{0x4322, 0x00},
+-	{0x4323, 0x00},
+-	{0x4324, 0x00},
+-	{0x4325, 0x00},
+-	{0x4326, 0x00},
+-	{0x4327, 0x00},
+-	{0x4328, 0x00},
+-	{0x4329, 0x00},
+-	{0x432c, 0x03},
+-	{0x432d, 0x81},
+-	{0x4501, 0x84},
+-	{0x4502, 0x40},
+-	{0x4503, 0x18},
+-	{0x4504, 0x04},
+-	{0x4508, 0x02},
+-	{0x4601, 0x10},
+-	{0x4800, 0x00},
+-	{0x4816, 0x52},
+-	{0x4837, 0x16},
+-	{0x5000, 0x7f},
+-	{0x5001, 0x00},
+-	{0x5005, 0x38},
+-	{0x501e, 0x0d},
+-	{0x5040, 0x00},
+-	{0x5901, 0x00},
+-	{0x3800, 0x00},
+-	{0x3801, 0x00},
+-	{0x3802, 0x00},
+-	{0x3803, 0x00},
+-	{0x3804, 0x07},
+-	{0x3805, 0x8f},
+-	{0x3806, 0x04},
+-	{0x3807, 0x47},
+-	{0x3808, 0x07},
+-	{0x3809, 0x8c},
+-	{0x380a, 0x04},
+-	{0x380b, 0x44},
+-	{0x3810, 0x00},
+-	{0x3811, 0x00},
+-	{0x3812, 0x00},
+-	{0x3813, 0x01},
+-};
+-
+-static const char * const ov2740_test_pattern_menu[] = {
+-	"Disabled",
+-	"Color Bar",
+-	"Top-Bottom Darker Color Bar",
+-	"Right-Left Darker Color Bar",
+-	"Bottom-Top Darker Color Bar",
+-};
+-
+-static const s64 link_freq_menu_items[] = {
+-	OV2740_LINK_FREQ_360MHZ,
+-};
+-
+-static const struct ov2740_link_freq_config link_freq_configs[] = {
+-	[OV2740_LINK_FREQ_360MHZ_INDEX] = {
+-		.reg_list = {
+-			.num_of_regs = ARRAY_SIZE(mipi_data_rate_720mbps),
+-			.regs = mipi_data_rate_720mbps,
+-		}
+-	},
+-};
+-
+-static const struct ov2740_mode supported_modes[] = {
+-	{
+-		.width = 1932,
+-		.height = 1092,
+-		.hts = 1080,
+-		.vts_def = OV2740_VTS_DEF,
+-		.vts_min = OV2740_VTS_MIN,
+-		.reg_list = {
+-			.num_of_regs = ARRAY_SIZE(mode_1932x1092_regs),
+-			.regs = mode_1932x1092_regs,
+-		},
+-		.link_freq_index = OV2740_LINK_FREQ_360MHZ_INDEX,
+-	},
++/* Power supplies */
++static const char * const ov2740_supply_names[] = {
++	"avdd",		/* Analog (2.8V) */
++	"dovdd",	/* Digital I/O (1.8V) */
++	"dvdd",		/* Digital core (1.2V) */
+ };
+ 
+ struct ov2740 {
+@@ -332,62 +110,136 @@ struct ov2740 {
+ 	struct v4l2_ctrl *vblank;
+ 	struct v4l2_ctrl *hblank;
+ 	struct v4l2_ctrl *exposure;
++	struct v4l2_ctrl *analog_gain;
++	struct v4l2_ctrl *digital_gain;
++	struct v4l2_ctrl *test_pattern;
++
++	/* Optional GPIOs */
++	struct gpio_desc *reset_gpio;
++	struct gpio_desc *powerdown_gpio;
++
++	/* Clock */
++	struct clk *inclk;
++
++	/* Regulators */
++	struct regulator_bulk_data supplies[ARRAY_SIZE(ov2740_supply_names)];
++
++	struct i2c_client      *i2c_client;
+ 
+ 	/* Current mode */
+ 	const struct ov2740_mode *cur_mode;
+ 
+-	/* To serialize asynchronus callbacks */
++	/* Mutex */
+ 	struct mutex mutex;
+ 
+-	/* Streaming on/off */
+ 	bool streaming;
++	bool                    identified;
+ 
+-	/* NVM data inforamtion */
+-	struct nvm_data *nvm;
++	/* Number of CSI lanes */
++	u32 lanes_nb;  // 添加缺失的字段
+ 
+-	/* True if the device has been identified */
+-	bool identified;
++	/* Device */
++	struct device *dev;
+ };
+ 
+-static inline struct ov2740 *to_ov2740(struct v4l2_subdev *subdev)
+-{
+-	return container_of(subdev, struct ov2740, sd);
+-}
++static const struct ov2740_reg mipi_data_rate_720mbps[] = {
++	{0x0103, 0x01}, {0x0302, 0x4b}, {0x030d, 0x4b},
++	{0x030e, 0x02}, {0x030a, 0x01}, {0x0312, 0x11},
++};
+ 
+-static u64 to_pixel_rate(u32 f_index)
+-{
+-	u64 pixel_rate = link_freq_menu_items[f_index] * 2 * OV2740_DATA_LANES;
++static const struct ov2740_reg mode_1932x1092_regs[] = {
++	{0x3000, 0x00}, {0x3018, 0x32}, {0x3031, 0x0a}, {0x3080, 0x08},
++	{0x3083, 0xB4}, {0x3103, 0x00}, {0x3104, 0x01}, {0x3106, 0x01},
++	{0x3500, 0x00}, {0x3501, 0x44}, {0x3502, 0x40}, {0x3503, 0x88},
++	{0x3507, 0x00}, {0x3508, 0x00}, {0x3509, 0x80}, {0x350c, 0x00},
++	{0x350d, 0x80}, {0x3510, 0x00}, {0x3511, 0x00}, {0x3512, 0x20},
++	{0x3632, 0x00}, {0x3633, 0x10}, {0x3634, 0x10}, {0x3635, 0x10},
++	{0x3645, 0x13}, {0x3646, 0x81}, {0x3636, 0x10}, {0x3651, 0x0a},
++	{0x3656, 0x02}, {0x3659, 0x04}, {0x365a, 0xda}, {0x365b, 0xa2},
++	{0x365c, 0x04}, {0x365d, 0x1d}, {0x365e, 0x1a}, {0x3662, 0xd7},
++	{0x3667, 0x78}, {0x3669, 0x0a}, {0x366a, 0x92}, {0x3700, 0x54},
++	{0x3702, 0x10}, {0x3706, 0x42}, {0x3709, 0x30}, {0x370b, 0xc2},
++	{0x3714, 0x63}, {0x3715, 0x01}, {0x3716, 0x00}, {0x371a, 0x3e},
++	{0x3732, 0x0e}, {0x3733, 0x10}, {0x375f, 0x0e}, {0x3768, 0x30},
++	{0x3769, 0x44}, {0x376a, 0x22}, {0x377b, 0x20}, {0x377c, 0x00},
++	{0x377d, 0x0c}, {0x3798, 0x00}, {0x37a1, 0x55}, {0x37a8, 0x6d},
++	{0x37c2, 0x04}, {0x37c5, 0x00}, {0x37c8, 0x00}, {0x3800, 0x00},
++	{0x3801, 0x00}, {0x3802, 0x00}, {0x3803, 0x00}, {0x3804, 0x07},
++	{0x3805, 0x8f}, {0x3806, 0x04}, {0x3807, 0x47}, {0x3808, 0x07},
++	{0x3809, 0x88}, {0x380a, 0x04}, {0x380b, 0x40}, {0x380c, 0x04},
++	{0x380d, 0x38}, {0x380e, 0x04}, {0x380f, 0x60}, {0x3810, 0x00},
++	{0x3811, 0x04}, {0x3812, 0x00}, {0x3813, 0x04}, {0x3814, 0x01},
++	{0x3815, 0x01}, {0x3820, 0x80}, {0x3821, 0x46}, {0x3822, 0x84},
++	{0x3829, 0x00}, {0x382a, 0x01}, {0x382b, 0x01}, {0x3830, 0x04},
++	{0x3836, 0x01}, {0x3837, 0x08}, {0x3839, 0x01}, {0x383a, 0x00},
++	{0x383b, 0x08}, {0x383c, 0x00}, {0x3f0b, 0x00}, {0x4001, 0x20},
++	{0x4009, 0x07}, {0x4003, 0x10}, {0x4010, 0xe0}, {0x4016, 0x00},
++	{0x4017, 0x10}, {0x4044, 0x02}, {0x4304, 0x08}, {0x4307, 0x30},
++	{0x4320, 0x80}, {0x4322, 0x00}, {0x4323, 0x00}, {0x4324, 0x00},
++	{0x4325, 0x00}, {0x4326, 0x00}, {0x4327, 0x00}, {0x4328, 0x00},
++	{0x4329, 0x00}, {0x432c, 0x03}, {0x432d, 0x81}, {0x4501, 0x84},
++	{0x4502, 0x40}, {0x4503, 0x18}, {0x4504, 0x04}, {0x4508, 0x02},
++	{0x4601, 0x10}, {0x4800, 0x00}, {0x4816, 0x52}, {0x4837, 0x16},
++	{0x5000, 0x7f}, {0x5001, 0x00}, {0x5005, 0x38}, {0x501e, 0x0d},
++	{0x5040, 0x00}, {0x5901, 0x00}, {0x3800, 0x00}, {0x3801, 0x00},
++	{0x3802, 0x00}, {0x3803, 0x00}, {0x3804, 0x07}, {0x3805, 0x8f},
++	{0x3806, 0x04}, {0x3807, 0x47}, {0x3808, 0x07}, {0x3809, 0x8c},
++	{0x380a, 0x04}, {0x380b, 0x44}, {0x3810, 0x00}, {0x3811, 0x00},
++	{0x3812, 0x00}, {0x3813, 0x01},
++};
+ 
+-	do_div(pixel_rate, OV2740_RGB_DEPTH);
++static const struct ov2740_mode supported_modes[] = {
++	{
++		.width = 1932,
++		.height = 1092,
++		.hts = 1080,
++		.vts_def = OV2740_VTS_DEF,
++		.vts_min = OV2740_VTS_MIN,
++		.link_freq_index = 0,
++		.reg_list = {
++			.num_of_regs = ARRAY_SIZE(mode_1932x1092_regs),
++			.regs = mode_1932x1092_regs,
++		},
++	},
++};
+ 
+-	return pixel_rate;
+-}
++static const struct ov2740_reg_list ov2740_reg_list_mipi_720mbps = {
++	.num_of_regs = ARRAY_SIZE(mipi_data_rate_720mbps),
++	.regs = mipi_data_rate_720mbps,
++};
+ 
+-static u64 to_pixels_per_line(u32 hts, u32 f_index)
++static inline struct ov2740 *to_ov2740(struct v4l2_subdev *subdev)
+ {
+-	u64 ppl = hts * to_pixel_rate(f_index);
+-
+-	do_div(ppl, OV2740_SCLK);
+-
+-	return ppl;
++	return container_of(subdev, struct ov2740, sd);
+ }
+ 
+ static int ov2740_read_reg(struct ov2740 *ov2740, u16 reg, u16 len, u32 *val)
+ {
+-	struct i2c_client *client = v4l2_get_subdevdata(&ov2740->sd);
++	struct i2c_client *client = ov2740->i2c_client;
+ 	struct i2c_msg msgs[2];
+ 	u8 addr_buf[2];
+ 	u8 data_buf[4] = {0};
+ 	int ret;
+ 
+-	if (len > sizeof(data_buf))
++	if (!client || !client->adapter) {
++		dev_err(&client->dev, "i2c not ready, defer\n");
++		return -EPROBE_DEFER;
++	}
++
++	if (len == 0 || len > sizeof(data_buf))
+ 		return -EINVAL;
+ 
+-	put_unaligned_be16(reg, addr_buf);
++	/* 16-bit big-endian register address */
++	addr_buf[0] = reg >> 8;
++	addr_buf[1] = reg & 0xff;
++
++	/* write msg: 发送寄存器地址 */
+ 	msgs[0].addr = client->addr;
+ 	msgs[0].flags = 0;
+ 	msgs[0].len = sizeof(addr_buf);
+ 	msgs[0].buf = addr_buf;
++
++	/* read msg: 读数据 */
+ 	msgs[1].addr = client->addr;
+ 	msgs[1].flags = I2C_M_RD;
+ 	msgs[1].len = len;
+@@ -397,44 +249,49 @@ static int ov2740_read_reg(struct ov2740 *ov2740, u16 reg, u16 len, u32 *val)
+ 	if (ret != ARRAY_SIZE(msgs))
+ 		return ret < 0 ? ret : -EIO;
+ 
+-	*val = get_unaligned_be32(data_buf);
++	/* 手动拼 32-bit 值（大端）*/
++	*val = 0;
++	for (int i = 0; i < len; i++)
++		*val = (*val << 8) | data_buf[i + (sizeof(data_buf) - len)];
+ 
+ 	return 0;
+ }
+ 
+ static int ov2740_write_reg(struct ov2740 *ov2740, u16 reg, u16 len, u32 val)
+ {
+-	struct i2c_client *client = v4l2_get_subdevdata(&ov2740->sd);
+-	u8 buf[6];
+-	int ret;
+-
+-	if (len > 4)
+-		return -EINVAL;
+-
+-	put_unaligned_be16(reg, buf);
+-	put_unaligned_be32(val << 8 * (4 - len), buf + 2);
+-
+-	ret = i2c_master_send(client, buf, len + 2);
+-	if (ret != len + 2)
+-		return ret < 0 ? ret : -EIO;
+-
+-	return 0;
++    struct i2c_client *client = ov2740->i2c_client;
++    u8 buf[6];
++    int ret;
++
++    if (!client || !client->adapter) {
++        dev_err(&client->dev, "i2c not ready, defer\n");
++        return -EPROBE_DEFER;
++    }
++    if (len > 4)
++        return -EINVAL;
++
++    buf[0] = reg >> 8;
++    buf[1] = reg & 0xff;
++    for (int i = 0; i < len; i++)
++        buf[2 + i] = (val >> (8 * (len - 1 - i))) & 0xff;
++
++    ret = i2c_master_send(client, buf, len + 2);
++    return (ret == len + 2) ? 0 : (ret < 0 ? ret : -EIO);
+ }
+ 
+ static int ov2740_write_reg_list(struct ov2740 *ov2740,
+-				 const struct ov2740_reg_list *r_list)
++				const struct ov2740_reg_list *r_list)
+ {
+-	struct i2c_client *client = v4l2_get_subdevdata(&ov2740->sd);
+ 	unsigned int i;
+ 	int ret;
+ 
+ 	for (i = 0; i < r_list->num_of_regs; i++) {
+ 		ret = ov2740_write_reg(ov2740, r_list->regs[i].address, 1,
+-				       r_list->regs[i].val);
++					r_list->regs[i].val);
+ 		if (ret) {
+-			dev_err_ratelimited(&client->dev,
+-					    "write reg 0x%4.4x return err = %d\n",
+-					    r_list->regs[i].address, ret);
++			dev_err_ratelimited(ov2740->dev,
++				"write reg 0x%4.4x err %d\n",
++				r_list->regs[i].address, ret);
+ 			return ret;
+ 		}
+ 	}
+@@ -444,26 +301,41 @@ static int ov2740_write_reg_list(struct ov2740 *ov2740,
+ 
+ static int ov2740_identify_module(struct ov2740 *ov2740)
+ {
+-	struct i2c_client *client = v4l2_get_subdevdata(&ov2740->sd);
+-	int ret;
+-	u32 val;
+-
+-	if (ov2740->identified)
++    u32 hi, mid, lo;
++    int ret;
++	/* 1. 可在调试时绕过通道（A） */
++	if (skip_id) {
++        dev_info(ov2740->dev, "skip ID read for debug\n");
+ 		return 0;
+-
+-	ret = ov2740_read_reg(ov2740, OV2740_REG_CHIP_ID, 3, &val);
+-	if (ret)
+-		return ret;
+-
+-	if (val != OV2740_CHIP_ID) {
+-		dev_err(&client->dev, "chip id mismatch: %x != %x\n",
+-			OV2740_CHIP_ID, val);
+-		return -ENXIO;
+ 	}
+ 
+-	ov2740->identified = true;
+-
+-	return 0;
++    /* 2. 正常读 ID + 根因修复（B） */
++    if (!ov2740->i2c_client || !ov2740->i2c_client->adapter) {
++        dev_err(ov2740->dev, "adapter not ready, defer\n");
++        return -EPROBE_DEFER;
++    }
++
++    /* 0x300A */
++    ret = ov2740_read_reg(ov2740, 0x300A, 1, &hi);
++    if (ret)
++        return ret;
++    /* 0x300B */
++    ret = ov2740_read_reg(ov2740, 0x300B, 1, &mid);
++    if (ret)
++        return ret;
++    /* 0x300C */
++    ret = ov2740_read_reg(ov2740, 0x300C, 1, &lo);
++    if (ret)
++        return ret;
++
++    u32 chip_id = (hi << 16) | (mid << 8) | lo;
++    if (chip_id != 0x002740) {
++        dev_err(ov2740->dev, "chip id mismatch: expected 0x002740, got 0x%06X\n", chip_id);
++        return -ENODEV;
++    }
++
++    dev_info(ov2740->dev, "OV2740 detected, chip id = 0x%06X\n", chip_id);
++    return 0;
+ }
+ 
+ static int ov2740_update_digital_gain(struct ov2740 *ov2740, u32 d_gain)
+@@ -471,7 +343,7 @@ static int ov2740_update_digital_gain(struct ov2740 *ov2740, u32 d_gain)
+ 	int ret;
+ 
+ 	ret = ov2740_write_reg(ov2740, OV2740_REG_GROUP_ACCESS, 1,
+-			       OV2740_GROUP_HOLD_START);
++				OV2740_GROUP_HOLD_START);
+ 	if (ret)
+ 		return ret;
+ 
+@@ -488,12 +360,12 @@ static int ov2740_update_digital_gain(struct ov2740 *ov2740, u32 d_gain)
+ 		return ret;
+ 
+ 	ret = ov2740_write_reg(ov2740, OV2740_REG_GROUP_ACCESS, 1,
+-			       OV2740_GROUP_HOLD_END);
++				OV2740_GROUP_HOLD_END);
+ 	if (ret)
+ 		return ret;
+ 
+ 	ret = ov2740_write_reg(ov2740, OV2740_REG_GROUP_ACCESS, 1,
+-			       OV2740_GROUP_HOLD_LAUNCH);
++				OV2740_GROUP_HOLD_LAUNCH);
+ 	return ret;
+ }
+ 
+@@ -501,7 +373,7 @@ static int ov2740_test_pattern(struct ov2740 *ov2740, u32 pattern)
+ {
+ 	if (pattern)
+ 		pattern = (pattern - 1) << OV2740_TEST_PATTERN_BAR_SHIFT |
+-			  OV2740_TEST_PATTERN_ENABLE;
++				OV2740_TEST_PATTERN_ENABLE;
+ 
+ 	return ov2740_write_reg(ov2740, OV2740_REG_TEST_PATTERN, 1, pattern);
+ }
+@@ -509,30 +381,28 @@ static int ov2740_test_pattern(struct ov2740 *ov2740, u32 pattern)
+ static int ov2740_set_ctrl(struct v4l2_ctrl *ctrl)
+ {
+ 	struct ov2740 *ov2740 = container_of(ctrl->handler,
+-					     struct ov2740, ctrl_handler);
+-	struct i2c_client *client = v4l2_get_subdevdata(&ov2740->sd);
++						struct ov2740, ctrl_handler);
+ 	s64 exposure_max;
+ 	int ret;
+ 
+ 	/* Propagate change of current control to all related controls */
+ 	if (ctrl->id == V4L2_CID_VBLANK) {
+-		/* Update max exposure while meeting expected vblanking */
+ 		exposure_max = ov2740->cur_mode->height + ctrl->val -
+-			       OV2740_EXPOSURE_MAX_MARGIN;
++				OV2740_EXPOSURE_MAX_MARGIN;
+ 		__v4l2_ctrl_modify_range(ov2740->exposure,
+-					 ov2740->exposure->minimum,
+-					 exposure_max, ov2740->exposure->step,
+-					 exposure_max);
++					ov2740->exposure->minimum,
++					exposure_max, ov2740->exposure->step,
++					exposure_max);
+ 	}
+ 
+ 	/* V4L2 controls values will be applied only when power is already up */
+-	if (!pm_runtime_get_if_in_use(&client->dev))
++	if (!pm_runtime_get_if_in_use(ov2740->dev))
+ 		return 0;
+ 
+ 	switch (ctrl->id) {
+ 	case V4L2_CID_ANALOGUE_GAIN:
+ 		ret = ov2740_write_reg(ov2740, OV2740_REG_ANALOG_GAIN, 2,
+-				       ctrl->val);
++					ctrl->val);
+ 		break;
+ 
+ 	case V4L2_CID_DIGITAL_GAIN:
+@@ -540,14 +410,13 @@ static int ov2740_set_ctrl(struct v4l2_ctrl *ctrl)
+ 		break;
+ 
+ 	case V4L2_CID_EXPOSURE:
+-		/* 4 least significant bits of expsoure are fractional part */
+ 		ret = ov2740_write_reg(ov2740, OV2740_REG_EXPOSURE, 3,
+-				       ctrl->val << 4);
++					ctrl->val << 4);
+ 		break;
+ 
+ 	case V4L2_CID_VBLANK:
+ 		ret = ov2740_write_reg(ov2740, OV2740_REG_VTS, 2,
+-				       ov2740->cur_mode->height + ctrl->val);
++					ov2740->cur_mode->height + ctrl->val);
+ 		break;
+ 
+ 	case V4L2_CID_TEST_PATTERN:
+@@ -559,7 +428,7 @@ static int ov2740_set_ctrl(struct v4l2_ctrl *ctrl)
+ 		break;
+ 	}
+ 
+-	pm_runtime_put(&client->dev);
++	pm_runtime_put(ov2740->dev);
+ 
+ 	return ret;
+ }
+@@ -570,367 +439,302 @@ static const struct v4l2_ctrl_ops ov2740_ctrl_ops = {
+ 
+ static int ov2740_init_controls(struct ov2740 *ov2740)
+ {
+-	struct v4l2_ctrl_handler *ctrl_hdlr;
+-	const struct ov2740_mode *cur_mode;
+-	s64 exposure_max, h_blank, pixel_rate;
+-	u32 vblank_min, vblank_max, vblank_default;
+-	int size;
++	struct v4l2_ctrl_handler *ctrl_hdlr = &ov2740->ctrl_handler;
++	const struct ov2740_mode *cur_mode = ov2740->cur_mode;
++	u64 pixel_rate;
++	s64 h_blank;
++	u32 vblank_def;
+ 	int ret;
+ 
+-	ctrl_hdlr = &ov2740->ctrl_handler;
+ 	ret = v4l2_ctrl_handler_init(ctrl_hdlr, 8);
+ 	if (ret)
+ 		return ret;
+ 
+ 	ctrl_hdlr->lock = &ov2740->mutex;
+-	cur_mode = ov2740->cur_mode;
+-	size = ARRAY_SIZE(link_freq_menu_items);
+ 
+-	ov2740->link_freq = v4l2_ctrl_new_int_menu(ctrl_hdlr, &ov2740_ctrl_ops,
+-						   V4L2_CID_LINK_FREQ,
+-						   size - 1, 0,
+-						   link_freq_menu_items);
++	/* Link frequency - read only */
++	ov2740->link_freq = v4l2_ctrl_new_std_menu(ctrl_hdlr, &ov2740_ctrl_ops,
++						V4L2_CID_LINK_FREQ,
++						0, 0, 0);
+ 	if (ov2740->link_freq)
+ 		ov2740->link_freq->flags |= V4L2_CTRL_FLAG_READ_ONLY;
+ 
+-	pixel_rate = to_pixel_rate(OV2740_LINK_FREQ_360MHZ_INDEX);
++	/* Pixel rate - read only */
++	pixel_rate = div_u64(OV2740_LINK_FREQ_360MHZ * 2 * OV2740_DATA_LANES,
++				OV2740_RGB_DEPTH);
+ 	ov2740->pixel_rate = v4l2_ctrl_new_std(ctrl_hdlr, &ov2740_ctrl_ops,
+-					       V4L2_CID_PIXEL_RATE, 0,
+-					       pixel_rate, 1, pixel_rate);
++						V4L2_CID_PIXEL_RATE,
++						pixel_rate, pixel_rate, 1, pixel_rate);
++	if (ov2740->pixel_rate)
++		ov2740->pixel_rate->flags |= V4L2_CTRL_FLAG_READ_ONLY;
+ 
+-	vblank_min = cur_mode->vts_min - cur_mode->height;
+-	vblank_max = OV2740_VTS_MAX - cur_mode->height;
+-	vblank_default = cur_mode->vts_def - cur_mode->height;
++	/* VBLANK */
++	vblank_def = cur_mode->vts_def - cur_mode->height;
+ 	ov2740->vblank = v4l2_ctrl_new_std(ctrl_hdlr, &ov2740_ctrl_ops,
+-					   V4L2_CID_VBLANK, vblank_min,
+-					   vblank_max, 1, vblank_default);
++					V4L2_CID_VBLANK,
++					cur_mode->vts_min - cur_mode->height,
++					OV2740_VTS_MAX - cur_mode->height,
++					1, vblank_def);
+ 
+-	h_blank = to_pixels_per_line(cur_mode->hts, cur_mode->link_freq_index);
+-	h_blank -= cur_mode->width;
++	/* HBLANK - read only */
++	h_blank = div_u64(cur_mode->hts * pixel_rate, OV2740_SCLK) - cur_mode->width;
+ 	ov2740->hblank = v4l2_ctrl_new_std(ctrl_hdlr, &ov2740_ctrl_ops,
+-					   V4L2_CID_HBLANK, h_blank, h_blank, 1,
+-					   h_blank);
++					V4L2_CID_HBLANK,
++					h_blank, h_blank, 1, h_blank);
+ 	if (ov2740->hblank)
+ 		ov2740->hblank->flags |= V4L2_CTRL_FLAG_READ_ONLY;
+ 
+-	v4l2_ctrl_new_std(ctrl_hdlr, &ov2740_ctrl_ops, V4L2_CID_ANALOGUE_GAIN,
+-			  OV2740_ANAL_GAIN_MIN, OV2740_ANAL_GAIN_MAX,
+-			  OV2740_ANAL_GAIN_STEP, OV2740_ANAL_GAIN_MIN);
+-	v4l2_ctrl_new_std(ctrl_hdlr, &ov2740_ctrl_ops, V4L2_CID_DIGITAL_GAIN,
+-			  OV2740_DGTL_GAIN_MIN, OV2740_DGTL_GAIN_MAX,
+-			  OV2740_DGTL_GAIN_STEP, OV2740_DGTL_GAIN_DEFAULT);
+-	exposure_max = cur_mode->vts_def - OV2740_EXPOSURE_MAX_MARGIN;
++	/* Analog gain */
++	ov2740->analog_gain = v4l2_ctrl_new_std(ctrl_hdlr, &ov2740_ctrl_ops,
++						V4L2_CID_ANALOGUE_GAIN,
++						OV2740_ANAL_GAIN_MIN,
++						OV2740_ANAL_GAIN_MAX,
++						OV2740_ANAL_GAIN_STEP,
++						OV2740_ANAL_GAIN_MIN);
++
++	/* Digital gain */
++	ov2740->digital_gain = v4l2_ctrl_new_std(ctrl_hdlr, &ov2740_ctrl_ops,
++						V4L2_CID_DIGITAL_GAIN,
++						OV2740_DGTL_GAIN_MIN,
++						OV2740_DGTL_GAIN_MAX,
++						OV2740_DGTL_GAIN_STEP,
++						OV2740_DGTL_GAIN_DEFAULT);
++
++	/* Exposure */
+ 	ov2740->exposure = v4l2_ctrl_new_std(ctrl_hdlr, &ov2740_ctrl_ops,
+-					     V4L2_CID_EXPOSURE,
+-					     OV2740_EXPOSURE_MIN, exposure_max,
+-					     OV2740_EXPOSURE_STEP,
+-					     exposure_max);
+-	v4l2_ctrl_new_std_menu_items(ctrl_hdlr, &ov2740_ctrl_ops,
+-				     V4L2_CID_TEST_PATTERN,
+-				     ARRAY_SIZE(ov2740_test_pattern_menu) - 1,
+-				     0, 0, ov2740_test_pattern_menu);
++						V4L2_CID_EXPOSURE,
++						OV2740_EXPOSURE_MIN,
++						cur_mode->vts_def - OV2740_EXPOSURE_MAX_MARGIN,
++						OV2740_EXPOSURE_STEP,
++						cur_mode->vts_def - OV2740_EXPOSURE_MAX_MARGIN);
++
++	/* Test pattern - 修复参数数量错误 */
++	ov2740->test_pattern = v4l2_ctrl_new_std_menu(ctrl_hdlr, &ov2740_ctrl_ops,
++							V4L2_CID_TEST_PATTERN,
++							4, 0, 0);
++
+ 	if (ctrl_hdlr->error) {
+ 		v4l2_ctrl_handler_free(ctrl_hdlr);
+ 		return ctrl_hdlr->error;
+ 	}
+ 
+ 	ov2740->sd.ctrl_handler = ctrl_hdlr;
+-
+ 	return 0;
+ }
+ 
+ static void ov2740_update_pad_format(const struct ov2740_mode *mode,
+-				     struct v4l2_mbus_framefmt *fmt)
++					struct v4l2_mbus_framefmt *fmt)
+ {
+ 	fmt->width = mode->width;
+ 	fmt->height = mode->height;
+ 	fmt->code = MEDIA_BUS_FMT_SGRBG10_1X10;
+ 	fmt->field = V4L2_FIELD_NONE;
++	fmt->colorspace = V4L2_COLORSPACE_RAW;
++	fmt->xfer_func = V4L2_XFER_FUNC_NONE;
+ }
+ 
+-static int ov2740_load_otp_data(struct nvm_data *nvm)
++static int ov2740_power_on(struct ov2740 *ov2740)
+ {
+-	struct device *dev = regmap_get_device(nvm->regmap);
+-	struct ov2740 *ov2740 = to_ov2740(dev_get_drvdata(dev));
+-	u32 isp_ctrl00 = 0;
+-	u32 isp_ctrl01 = 0;
+ 	int ret;
+ 
+-	if (nvm->nvm_buffer)
+-		return 0;
+-
+-	nvm->nvm_buffer = kzalloc(CUSTOMER_USE_OTP_SIZE, GFP_KERNEL);
+-	if (!nvm->nvm_buffer)
+-		return -ENOMEM;
+-
+-	ret = ov2740_read_reg(ov2740, OV2740_REG_ISP_CTRL00, 1, &isp_ctrl00);
++	/* Enable regulators */
++	ret = regulator_bulk_enable(ARRAY_SIZE(ov2740->supplies),
++					ov2740->supplies);
+ 	if (ret) {
+-		dev_err(dev, "failed to read ISP CTRL00\n");
+-		goto err;
++		dev_err(ov2740->dev, "failed to enable regulators: %d\n", ret);
++		return ret;
+ 	}
+ 
+-	ret = ov2740_read_reg(ov2740, OV2740_REG_ISP_CTRL01, 1, &isp_ctrl01);
+-	if (ret) {
+-		dev_err(dev, "failed to read ISP CTRL01\n");
+-		goto err;
++	/* Apply GPIOs if available */
++	if (ov2740->powerdown_gpio) {
++		gpiod_set_value_cansleep(ov2740->powerdown_gpio, 0);
++		usleep_range(1000, 2000);
+ 	}
+ 
+-	/* Clear bit 5 of ISP CTRL00 */
+-	ret = ov2740_write_reg(ov2740, OV2740_REG_ISP_CTRL00, 1,
+-			       isp_ctrl00 & ~BIT(5));
+-	if (ret) {
+-		dev_err(dev, "failed to set ISP CTRL00\n");
+-		goto err;
++	if (ov2740->reset_gpio) {
++		gpiod_set_value_cansleep(ov2740->reset_gpio, 0);
++		usleep_range(1000, 2000);
+ 	}
+ 
+-	/* Clear bit 7 of ISP CTRL01 */
+-	ret = ov2740_write_reg(ov2740, OV2740_REG_ISP_CTRL01, 1,
+-			       isp_ctrl01 & ~BIT(7));
++	/* Enable clock */
++	ret = clk_prepare_enable(ov2740->inclk);
+ 	if (ret) {
+-		dev_err(dev, "failed to set ISP CTRL01\n");
+-		goto err;
++		dev_err(ov2740->dev, "failed to enable clock: %d\n", ret);
++		goto error_disable_regulators;
+ 	}
+ 
+-	ret = ov2740_write_reg(ov2740, OV2740_REG_MODE_SELECT, 1,
+-			       OV2740_MODE_STREAMING);
+-	if (ret) {
+-		dev_err(dev, "failed to set streaming mode\n");
+-		goto err;
+-	}
+-
+-	/*
+-	 * Users are not allowed to access OTP-related registers and memory
+-	 * during the 20 ms period after streaming starts (0x100 = 0x01).
+-	 */
+-	msleep(20);
++	/* Sensor power-up stabilization period */
++	usleep_range(5000, 10000);
+ 
+-	ret = regmap_bulk_read(nvm->regmap, OV2740_REG_OTP_CUSTOMER,
+-			       nvm->nvm_buffer, CUSTOMER_USE_OTP_SIZE);
+-	if (ret) {
+-		dev_err(dev, "failed to read OTP data, ret %d\n", ret);
+-		goto err;
+-	}
++	return 0;
+ 
+-	ret = ov2740_write_reg(ov2740, OV2740_REG_MODE_SELECT, 1,
+-			       OV2740_MODE_STANDBY);
+-	if (ret) {
+-		dev_err(dev, "failed to set streaming mode\n");
+-		goto err;
+-	}
++error_disable_regulators:
++	regulator_bulk_disable(ARRAY_SIZE(ov2740->supplies), ov2740->supplies);
++	return ret;
++}
+ 
+-	ret = ov2740_write_reg(ov2740, OV2740_REG_ISP_CTRL01, 1, isp_ctrl01);
+-	if (ret) {
+-		dev_err(dev, "failed to set ISP CTRL01\n");
+-		goto err;
+-	}
++static void ov2740_power_off(struct ov2740 *ov2740)
++{
++	clk_disable_unprepare(ov2740->inclk);
+ 
+-	ret = ov2740_write_reg(ov2740, OV2740_REG_ISP_CTRL00, 1, isp_ctrl00);
+-	if (ret) {
+-		dev_err(dev, "failed to set ISP CTRL00\n");
+-		goto err;
+-	}
++	/* Set GPIOs to power-down state if available */
++	if (ov2740->reset_gpio)
++		gpiod_set_value_cansleep(ov2740->reset_gpio, 1);
+ 
+-	return 0;
+-err:
+-	kfree(nvm->nvm_buffer);
+-	nvm->nvm_buffer = NULL;
++	if (ov2740->powerdown_gpio)
++		gpiod_set_value_cansleep(ov2740->powerdown_gpio, 1);
+ 
+-	return ret;
++	regulator_bulk_disable(ARRAY_SIZE(ov2740->supplies), ov2740->supplies);
+ }
+ 
+ static int ov2740_start_streaming(struct ov2740 *ov2740)
+ {
+-	struct i2c_client *client = v4l2_get_subdevdata(&ov2740->sd);
+-	const struct ov2740_reg_list *reg_list;
+-	int link_freq_index;
+ 	int ret;
+ 
+ 	ret = ov2740_identify_module(ov2740);
+ 	if (ret)
+ 		return ret;
+ 
+-	if (ov2740->nvm)
+-		ov2740_load_otp_data(ov2740->nvm);
+-
+-	link_freq_index = ov2740->cur_mode->link_freq_index;
+-	reg_list = &link_freq_configs[link_freq_index].reg_list;
+-	ret = ov2740_write_reg_list(ov2740, reg_list);
++	/* Write MIPI data rate configuration */
++	ret = ov2740_write_reg_list(ov2740, &ov2740_reg_list_mipi_720mbps);
+ 	if (ret) {
+-		dev_err(&client->dev, "failed to set plls\n");
++		dev_err(ov2740->dev, "failed to set MIPI data rate: %d\n", ret);
+ 		return ret;
+ 	}
+ 
+-	reg_list = &ov2740->cur_mode->reg_list;
+-	ret = ov2740_write_reg_list(ov2740, reg_list);
++	/* Write mode registers */
++	ret = ov2740_write_reg_list(ov2740, &ov2740->cur_mode->reg_list);
+ 	if (ret) {
+-		dev_err(&client->dev, "failed to set mode\n");
++		dev_err(ov2740->dev, "failed to set mode: %d\n", ret);
+ 		return ret;
+ 	}
+ 
++	/* Apply control values */
+ 	ret = __v4l2_ctrl_handler_setup(ov2740->sd.ctrl_handler);
+-	if (ret)
++	if (ret) {
++		dev_err(ov2740->dev, "failed to setup controls: %d\n", ret);
+ 		return ret;
++	}
+ 
++	/* Start streaming */
+ 	ret = ov2740_write_reg(ov2740, OV2740_REG_MODE_SELECT, 1,
+-			       OV2740_MODE_STREAMING);
+-	if (ret)
+-		dev_err(&client->dev, "failed to start streaming\n");
++				OV2740_MODE_STREAMING);
++	if (ret) {
++		dev_err(ov2740->dev, "failed to start streaming: %d\n", ret);
++		return ret;
++	}
+ 
+-	return ret;
++	/* Stream startup delay */
++	usleep_range(20000, 25000);
++
++	return 0;
+ }
+ 
+ static void ov2740_stop_streaming(struct ov2740 *ov2740)
+ {
+-	struct i2c_client *client = v4l2_get_subdevdata(&ov2740->sd);
++	int ret;
+ 
+-	if (ov2740_write_reg(ov2740, OV2740_REG_MODE_SELECT, 1,
+-			     OV2740_MODE_STANDBY))
+-		dev_err(&client->dev, "failed to stop streaming\n");
++	ret = ov2740_write_reg(ov2740, OV2740_REG_MODE_SELECT, 1,
++				OV2740_MODE_STANDBY);
++	if (ret)
++		dev_err(ov2740->dev, "failed to stop streaming: %d\n", ret);
+ }
+ 
+ static int ov2740_set_stream(struct v4l2_subdev *sd, int enable)
+ {
+ 	struct ov2740 *ov2740 = to_ov2740(sd);
+-	struct i2c_client *client = v4l2_get_subdevdata(sd);
+ 	int ret = 0;
+ 
+ 	if (ov2740->streaming == enable)
+ 		return 0;
+ 
+ 	mutex_lock(&ov2740->mutex);
++
+ 	if (enable) {
+-		ret = pm_runtime_resume_and_get(&client->dev);
+-		if (ret < 0) {
+-			mutex_unlock(&ov2740->mutex);
+-			return ret;
+-		}
++		ret = pm_runtime_resume_and_get(ov2740->dev);
++		if (ret < 0)
++			goto unlock;
+ 
+ 		ret = ov2740_start_streaming(ov2740);
+ 		if (ret) {
+-			enable = 0;
+ 			ov2740_stop_streaming(ov2740);
+-			pm_runtime_put(&client->dev);
++			pm_runtime_put(ov2740->dev);
++			goto unlock;
+ 		}
+ 	} else {
+ 		ov2740_stop_streaming(ov2740);
+-		pm_runtime_put(&client->dev);
++		pm_runtime_put(ov2740->dev);
+ 	}
+ 
+ 	ov2740->streaming = enable;
+-	mutex_unlock(&ov2740->mutex);
+-
+-	return ret;
+-}
+-
+-static int ov2740_suspend(struct device *dev)
+-{
+-	struct v4l2_subdev *sd = dev_get_drvdata(dev);
+-	struct ov2740 *ov2740 = to_ov2740(sd);
+-
+-	mutex_lock(&ov2740->mutex);
+-	if (ov2740->streaming)
+-		ov2740_stop_streaming(ov2740);
+ 
+-	mutex_unlock(&ov2740->mutex);
+-
+-	return 0;
+-}
+-
+-static int ov2740_resume(struct device *dev)
+-{
+-	struct v4l2_subdev *sd = dev_get_drvdata(dev);
+-	struct ov2740 *ov2740 = to_ov2740(sd);
+-	int ret = 0;
+-
+-	mutex_lock(&ov2740->mutex);
+-	if (!ov2740->streaming)
+-		goto exit;
+-
+-	ret = ov2740_start_streaming(ov2740);
+-	if (ret) {
+-		ov2740->streaming = false;
+-		ov2740_stop_streaming(ov2740);
+-	}
+-
+-exit:
++unlock:
+ 	mutex_unlock(&ov2740->mutex);
+ 	return ret;
+ }
+ 
+ static int ov2740_set_format(struct v4l2_subdev *sd,
+-			     struct v4l2_subdev_state *sd_state,
+-			     struct v4l2_subdev_format *fmt)
++				struct v4l2_subdev_state *sd_state,
++				struct v4l2_subdev_format *fmt)
+ {
+ 	struct ov2740 *ov2740 = to_ov2740(sd);
+ 	const struct ov2740_mode *mode;
+-	s32 vblank_def, h_blank;
++
++	mutex_lock(&ov2740->mutex);
+ 
+ 	mode = v4l2_find_nearest_size(supported_modes,
+-				      ARRAY_SIZE(supported_modes), width,
+-				      height, fmt->format.width,
+-				      fmt->format.height);
++					ARRAY_SIZE(supported_modes),
++					width, height,
++					fmt->format.width,
++					fmt->format.height);
+ 
+-	mutex_lock(&ov2740->mutex);
+ 	ov2740_update_pad_format(mode, &fmt->format);
++
+ 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
+ 		*v4l2_subdev_get_try_format(sd, sd_state, fmt->pad) = fmt->format;
+ 	} else {
+ 		ov2740->cur_mode = mode;
+ 		__v4l2_ctrl_s_ctrl(ov2740->link_freq, mode->link_freq_index);
+ 		__v4l2_ctrl_s_ctrl_int64(ov2740->pixel_rate,
+-					 to_pixel_rate(mode->link_freq_index));
+-
+-		/* Update limits and set FPS to default */
+-		vblank_def = mode->vts_def - mode->height;
+-		__v4l2_ctrl_modify_range(ov2740->vblank,
+-					 mode->vts_min - mode->height,
+-					 OV2740_VTS_MAX - mode->height, 1,
+-					 vblank_def);
+-		__v4l2_ctrl_s_ctrl(ov2740->vblank, vblank_def);
+-		h_blank = to_pixels_per_line(mode->hts, mode->link_freq_index) -
+-			  mode->width;
+-		__v4l2_ctrl_modify_range(ov2740->hblank, h_blank, h_blank, 1,
+-					 h_blank);
++					div_u64(OV2740_LINK_FREQ_360MHZ * 2 * OV2740_DATA_LANES,
++						OV2740_RGB_DEPTH));
+ 	}
+-	mutex_unlock(&ov2740->mutex);
+ 
++	mutex_unlock(&ov2740->mutex);
+ 	return 0;
+ }
+ 
+ static int ov2740_get_format(struct v4l2_subdev *sd,
+-			     struct v4l2_subdev_state *sd_state,
+-			     struct v4l2_subdev_format *fmt)
++				struct v4l2_subdev_state *sd_state,
++				struct v4l2_subdev_format *fmt)
+ {
+ 	struct ov2740 *ov2740 = to_ov2740(sd);
+ 
+ 	mutex_lock(&ov2740->mutex);
++
+ 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
+-		fmt->format = *v4l2_subdev_get_try_format(&ov2740->sd,
+-							  sd_state,
+-							  fmt->pad);
++		fmt->format = *v4l2_subdev_get_try_format(sd, sd_state, fmt->pad);
+ 	else
+ 		ov2740_update_pad_format(ov2740->cur_mode, &fmt->format);
+ 
+ 	mutex_unlock(&ov2740->mutex);
+-
+ 	return 0;
+ }
+ 
+ static int ov2740_enum_mbus_code(struct v4l2_subdev *sd,
+-				 struct v4l2_subdev_state *sd_state,
+-				 struct v4l2_subdev_mbus_code_enum *code)
++				struct v4l2_subdev_state *sd_state,
++				struct v4l2_subdev_mbus_code_enum *code)
+ {
+ 	if (code->index > 0)
+ 		return -EINVAL;
+ 
+ 	code->code = MEDIA_BUS_FMT_SGRBG10_1X10;
+-
+ 	return 0;
+ }
+ 
+ static int ov2740_enum_frame_size(struct v4l2_subdev *sd,
+-				  struct v4l2_subdev_state *sd_state,
+-				  struct v4l2_subdev_frame_size_enum *fse)
++				struct v4l2_subdev_state *sd_state,
++				struct v4l2_subdev_frame_size_enum *fse)
+ {
+ 	if (fse->index >= ARRAY_SIZE(supported_modes))
+ 		return -EINVAL;
+@@ -952,7 +756,7 @@ static int ov2740_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+ 
+ 	mutex_lock(&ov2740->mutex);
+ 	ov2740_update_pad_format(&supported_modes[0],
+-				 v4l2_subdev_get_try_format(sd, fh->state, 0));
++				v4l2_subdev_get_try_format(sd, fh->state, 0));
+ 	mutex_unlock(&ov2740->mutex);
+ 
+ 	return 0;
+@@ -974,256 +778,259 @@ static const struct v4l2_subdev_ops ov2740_subdev_ops = {
+ 	.pad = &ov2740_pad_ops,
+ };
+ 
+-static const struct media_entity_operations ov2740_subdev_entity_ops = {
+-	.link_validate = v4l2_subdev_link_validate,
+-};
+-
+ static const struct v4l2_subdev_internal_ops ov2740_internal_ops = {
+ 	.open = ov2740_open,
+ };
+ 
+-static int ov2740_check_hwcfg(struct device *dev)
++static int ov2740_parse_dt(struct ov2740 *ov2740)
+ {
++	struct device_node *node = ov2740->dev->of_node;
+ 	struct fwnode_handle *ep;
+-	struct fwnode_handle *fwnode = dev_fwnode(dev);
+ 	struct v4l2_fwnode_endpoint bus_cfg = {
+ 		.bus_type = V4L2_MBUS_CSI2_DPHY
+ 	};
+-	u32 mclk;
++	unsigned int i;
+ 	int ret;
+-	unsigned int i, j;
+-
+-	ret = fwnode_property_read_u32(fwnode, "clock-frequency", &mclk);
+-	if (ret)
+-		return ret;
+-
+-	if (mclk != OV2740_MCLK)
+-		return dev_err_probe(dev, -EINVAL,
+-				     "external clock %d is not supported\n",
+-				     mclk);
+ 
+-	ep = fwnode_graph_get_next_endpoint(fwnode, NULL);
+-	if (!ep)
+-		return -ENXIO;
+-
+-	ret = v4l2_fwnode_endpoint_alloc_parse(ep, &bus_cfg);
+-	fwnode_handle_put(ep);
+-	if (ret)
+-		return ret;
++	if (!node)
++		return -ENODEV;
+ 
+-	if (bus_cfg.bus.mipi_csi2.num_data_lanes != OV2740_DATA_LANES) {
+-		ret = dev_err_probe(dev, -EINVAL,
+-				    "number of CSI2 data lanes %d is not supported\n",
+-				    bus_cfg.bus.mipi_csi2.num_data_lanes);
+-		goto check_hwcfg_error;
++	/* Parse optional GPIOs */
++	ov2740->reset_gpio = devm_gpiod_get_optional(ov2740->dev, "reset",
++						     GPIOD_OUT_LOW);
++	if (IS_ERR(ov2740->reset_gpio)) {
++		dev_err(ov2740->dev, "failed to get reset gpio: %ld\n",
++			PTR_ERR(ov2740->reset_gpio));
++		return PTR_ERR(ov2740->reset_gpio);
+ 	}
+ 
+-	if (!bus_cfg.nr_of_link_frequencies) {
+-		ret = dev_err_probe(dev, -EINVAL, "no link frequencies defined\n");
+-		goto check_hwcfg_error;
++	ov2740->powerdown_gpio = devm_gpiod_get_optional(ov2740->dev, "powerdown",
++							 GPIOD_OUT_LOW);
++	if (IS_ERR(ov2740->powerdown_gpio)) {
++		dev_err(ov2740->dev, "failed to get powerdown gpio: %ld\n",
++			PTR_ERR(ov2740->powerdown_gpio));
++		return PTR_ERR(ov2740->powerdown_gpio);
+ 	}
+ 
+-	for (i = 0; i < ARRAY_SIZE(link_freq_menu_items); i++) {
+-		for (j = 0; j < bus_cfg.nr_of_link_frequencies; j++) {
+-			if (link_freq_menu_items[i] ==
+-				bus_cfg.link_frequencies[j])
+-				break;
+-		}
++	/* Initialize regulators */
++	for (i = 0; i < ARRAY_SIZE(ov2740_supply_names); i++)
++		ov2740->supplies[i].supply = ov2740_supply_names[i];
+ 
+-		if (j == bus_cfg.nr_of_link_frequencies) {
+-			ret = dev_err_probe(dev, -EINVAL,
+-					    "no link frequency %lld supported\n",
+-					    link_freq_menu_items[i]);
+-			goto check_hwcfg_error;
+-		}
++	ret = devm_regulator_bulk_get(ov2740->dev,
++					ARRAY_SIZE(ov2740_supply_names),
++					ov2740->supplies);
++	if (ret) {
++		dev_err(ov2740->dev, "failed to get regulators: %d\n", ret);
++		return ret;
+ 	}
+ 
+-check_hwcfg_error:
+-	v4l2_fwnode_endpoint_free(&bus_cfg);
++	/* Get sensor input clock */
++	ov2740->inclk = devm_clk_get(ov2740->dev, NULL);
++	if (IS_ERR(ov2740->inclk)) {
++		dev_err(ov2740->dev, "failed to get clock\n");
++		return PTR_ERR(ov2740->inclk);
++	}
+ 
+-	return ret;
+-}
++	ret = clk_set_rate(ov2740->inclk, OV2740_MCLK);
++	if (ret) {
++		dev_err(ov2740->dev, "failed to set clock rate to %d Hz: %d\n",
++			OV2740_MCLK, ret);
++		return ret;
++	}
+ 
+-static void ov2740_remove(struct i2c_client *client)
+-{
+-	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+-	struct ov2740 *ov2740 = to_ov2740(sd);
++	/* Parse endpoint configuration */
++	ep = fwnode_graph_get_next_endpoint(of_fwnode_handle(node), NULL);
++	if (!ep) {
++		dev_err(ov2740->dev, "failed to get endpoint\n");
++		return -ENXIO;
++	}
+ 
+-	v4l2_async_unregister_subdev(sd);
+-	media_entity_cleanup(&sd->entity);
+-	v4l2_ctrl_handler_free(sd->ctrl_handler);
+-	pm_runtime_disable(&client->dev);
+-	mutex_destroy(&ov2740->mutex);
+-}
++	ret = v4l2_fwnode_endpoint_alloc_parse(ep, &bus_cfg);
++	fwnode_handle_put(ep);
++	if (ret) {
++		dev_err(ov2740->dev, "failed to parse endpoint: %d\n", ret);
++		return ret;
++	}
+ 
+-static int ov2740_nvmem_read(void *priv, unsigned int off, void *val,
+-			     size_t count)
+-{
+-	struct nvm_data *nvm = priv;
+-	struct device *dev = regmap_get_device(nvm->regmap);
+-	struct ov2740 *ov2740 = to_ov2740(dev_get_drvdata(dev));
+-	int ret = 0;
++	if (bus_cfg.bus.mipi_csi2.num_data_lanes != OV2740_DATA_LANES) {
++		dev_err(ov2740->dev, "invalid number of data lanes: %d (expected %d)\n",
++			bus_cfg.bus.mipi_csi2.num_data_lanes, OV2740_DATA_LANES);
++		ret = -EINVAL;
++		goto done;
++	}
+ 
+-	mutex_lock(&ov2740->mutex);
++	ov2740->lanes_nb = bus_cfg.bus.mipi_csi2.num_data_lanes;
+ 
+-	if (nvm->nvm_buffer) {
+-		memcpy(val, nvm->nvm_buffer + off, count);
+-		goto exit;
++	if (!bus_cfg.nr_of_link_frequencies) {
++		dev_err(ov2740->dev, "no link frequencies defined\n");
++		ret = -EINVAL;
++		goto done;
+ 	}
+ 
+-	ret = pm_runtime_resume_and_get(dev);
+-	if (ret < 0) {
+-		goto exit;
++	for (i = 0; i < bus_cfg.nr_of_link_frequencies; i++) {
++		if (bus_cfg.link_frequencies[i] == OV2740_LINK_FREQ_360MHZ)
++			goto done;
+ 	}
+ 
+-	ret = ov2740_load_otp_data(nvm);
+-	if (!ret)
+-		memcpy(val, nvm->nvm_buffer + off, count);
++	dev_err(ov2740->dev, "link frequency %lld not supported\n",
++		OV2740_LINK_FREQ_360MHZ);
++	ret = -EINVAL;
+ 
+-	pm_runtime_put(dev);
+-exit:
+-	mutex_unlock(&ov2740->mutex);
++done:
++	v4l2_fwnode_endpoint_free(&bus_cfg);
+ 	return ret;
+ }
+ 
+-static int ov2740_register_nvmem(struct i2c_client *client,
+-				 struct ov2740 *ov2740)
++static int ov2740_probe(struct i2c_client *client)
+ {
+-	struct nvm_data *nvm;
+-	struct regmap_config regmap_config = { };
+-	struct nvmem_config nvmem_config = { };
+-	struct regmap *regmap;
+ 	struct device *dev = &client->dev;
++	struct ov2740 *ov2740;
++	int ret;
+ 
+-	nvm = devm_kzalloc(dev, sizeof(*nvm), GFP_KERNEL);
+-	if (!nvm)
++	ov2740 = devm_kzalloc(dev, sizeof(*ov2740), GFP_KERNEL);
++	if (!ov2740)
+ 		return -ENOMEM;
+ 
+-	regmap_config.val_bits = 8;
+-	regmap_config.reg_bits = 16;
+-	regmap_config.disable_locking = true;
+-	regmap = devm_regmap_init_i2c(client, &regmap_config);
+-	if (IS_ERR(regmap))
+-		return PTR_ERR(regmap);
+-
+-	nvm->regmap = regmap;
+-
+-	nvmem_config.name = dev_name(dev);
+-	nvmem_config.dev = dev;
+-	nvmem_config.read_only = true;
+-	nvmem_config.root_only = true;
+-	nvmem_config.owner = THIS_MODULE;
+-	nvmem_config.compat = true;
+-	nvmem_config.base_dev = dev;
+-	nvmem_config.reg_read = ov2740_nvmem_read;
+-	nvmem_config.reg_write = NULL;
+-	nvmem_config.priv = nvm;
+-	nvmem_config.stride = 1;
+-	nvmem_config.word_size = 1;
+-	nvmem_config.size = CUSTOMER_USE_OTP_SIZE;
+-
+-	nvm->nvmem = devm_nvmem_register(dev, &nvmem_config);
+-	if (IS_ERR(nvm->nvmem))
+-		return PTR_ERR(nvm->nvmem);
+-
+-	ov2740->nvm = nvm;
+-	return 0;
+-}
++	ov2740->i2c_client = client;
++	ov2740->dev = dev;
++	ov2740->cur_mode = &supported_modes[0];
+ 
+-static int ov2740_probe(struct i2c_client *client)
+-{
+-	struct device *dev = &client->dev;
+-	struct ov2740 *ov2740;
+-	bool full_power;
+-	int ret;
++	mutex_init(&ov2740->mutex);
+ 
+-	ret = ov2740_check_hwcfg(&client->dev);
++	/* Parse device tree */
++	ret = ov2740_parse_dt(ov2740);
+ 	if (ret)
+-		return dev_err_probe(dev, ret, "failed to check HW configuration\n");
++		goto error_mutex_destroy;
+ 
+-	ov2740 = devm_kzalloc(&client->dev, sizeof(*ov2740), GFP_KERNEL);
+-	if (!ov2740)
+-		return -ENOMEM;
++	/* Power on and detect sensor */
++	ret = ov2740_power_on(ov2740);
++	if (ret) {
++		dev_err(dev, "failed to power on sensor: %d\n", ret);
++		goto error_mutex_destroy;
++	}
+ 
+-	v4l2_i2c_subdev_init(&ov2740->sd, client, &ov2740_subdev_ops);
+-	full_power = acpi_dev_state_d0(&client->dev);
+-	if (full_power) {
+-		ret = ov2740_identify_module(ov2740);
+-		if (ret)
+-			return dev_err_probe(dev, ret, "failed to find sensor\n");
++	ret = ov2740_identify_module(ov2740);
++	if (ret) {
++		dev_err(dev, "failed to identify sensor: %d\n", ret);
++		goto error_power_off;
+ 	}
+ 
+-	mutex_init(&ov2740->mutex);
+-	ov2740->cur_mode = &supported_modes[0];
++	/* Initialize V4L2 controls */
+ 	ret = ov2740_init_controls(ov2740);
+ 	if (ret) {
+-		dev_err_probe(dev, ret, "failed to init controls\n");
+-		goto probe_error_v4l2_ctrl_handler_free;
++		dev_err(dev, "failed to init controls: %d\n", ret);
++		goto error_power_off;
+ 	}
+ 
++	/* Initialize V4L2 subdev */
++	v4l2_i2c_subdev_init(&ov2740->sd, client, &ov2740_subdev_ops);
+ 	ov2740->sd.internal_ops = &ov2740_internal_ops;
+ 	ov2740->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
+-	ov2740->sd.entity.ops = &ov2740_subdev_entity_ops;
+ 	ov2740->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
++
++	/* Initialize media pad */
+ 	ov2740->pad.flags = MEDIA_PAD_FL_SOURCE;
+ 	ret = media_entity_pads_init(&ov2740->sd.entity, 1, &ov2740->pad);
+ 	if (ret) {
+-		dev_err_probe(dev, ret, "failed to init entity pads\n");
+-		goto probe_error_v4l2_ctrl_handler_free;
++		dev_err(dev, "failed to init media pads: %d\n", ret);
++		goto error_ctrl_free;
+ 	}
+ 
++	/* Register subdev */
+ 	ret = v4l2_async_register_subdev_sensor(&ov2740->sd);
+-	if (ret < 0) {
+-		dev_err_probe(dev, ret, "failed to register V4L2 subdev\n");
+-		goto probe_error_media_entity_cleanup;
++	if (ret) {
++		dev_err(dev, "failed to register subdev: %d\n", ret);
++		goto error_media_cleanup;
+ 	}
+ 
+-	ret = ov2740_register_nvmem(client, ov2740);
+-	if (ret)
+-		dev_warn(&client->dev, "register nvmem failed, ret %d\n", ret);
++	/* Power off until streaming */
++	ov2740_power_off(ov2740);
+ 
+-	/* Set the device's state to active if it's in D0 state. */
+-	if (full_power)
+-		pm_runtime_set_active(&client->dev);
+-	pm_runtime_enable(&client->dev);
+-	pm_runtime_idle(&client->dev);
++	/* Initialize runtime PM */
++	pm_runtime_set_active(dev);
++	pm_runtime_enable(dev);
++	pm_runtime_idle(dev);
+ 
++	dev_info(dev, "OV2740 V2 MIPI CSI-2 camera driver probed successfully\n");
+ 	return 0;
+ 
+-probe_error_media_entity_cleanup:
++error_media_cleanup:
+ 	media_entity_cleanup(&ov2740->sd.entity);
+-
+-probe_error_v4l2_ctrl_handler_free:
++error_ctrl_free:
+ 	v4l2_ctrl_handler_free(ov2740->sd.ctrl_handler);
++error_power_off:
++	ov2740_power_off(ov2740);
++error_mutex_destroy:
+ 	mutex_destroy(&ov2740->mutex);
+-
+ 	return ret;
+ }
+ 
+-static DEFINE_SIMPLE_DEV_PM_OPS(ov2740_pm_ops, ov2740_suspend, ov2740_resume);
++static void ov2740_remove(struct i2c_client *client)
++{
++	struct v4l2_subdev *sd = i2c_get_clientdata(client);
++	struct ov2740 *ov2740 = to_ov2740(sd);
++
++	v4l2_async_unregister_subdev(sd);
++	media_entity_cleanup(&sd->entity);
++	v4l2_ctrl_handler_free(sd->ctrl_handler);
++	pm_runtime_disable(&client->dev);
++	mutex_destroy(&ov2740->mutex);
++}
++
++// 修复PM函数签名
++static int ov2740_pm_suspend(struct device *dev)
++{
++	struct v4l2_subdev *sd = dev_get_drvdata(dev);
++	struct ov2740 *ov2740 = to_ov2740(sd);
++
++	ov2740_power_off(ov2740);
++	return 0;
++}
+ 
+-static const struct acpi_device_id ov2740_acpi_ids[] = {
+-	{"INT3474"},
+-	{}
++static int ov2740_pm_resume(struct device *dev)
++{
++	struct v4l2_subdev *sd = dev_get_drvdata(dev);
++	struct ov2740 *ov2740 = to_ov2740(sd);
++	int ret;
++
++	ret = ov2740_power_on(ov2740);
++	if (ret)
++		return ret;
++
++	if (ov2740->streaming) {
++		ret = ov2740_start_streaming(ov2740);
++		if (ret) {
++			ov2740->streaming = false;
++			return ret;
++		}
++	}
++
++	return 0;
++}
++
++static const struct dev_pm_ops ov2740_pm_ops = {
++	SET_RUNTIME_PM_OPS(ov2740_pm_suspend, ov2740_pm_resume, NULL)
+ };
+ 
+-MODULE_DEVICE_TABLE(acpi, ov2740_acpi_ids);
++static const struct of_device_id ov2740_of_match[] = {
++	{ .compatible = "omnivision,ov2740" },  // 修改compatible
++	{ }
++};
++MODULE_DEVICE_TABLE(of, ov2740_of_match);
+ 
+ static struct i2c_driver ov2740_i2c_driver = {
+ 	.driver = {
+-		.name = "ov2740",
+-		.pm = pm_sleep_ptr(&ov2740_pm_ops),
+-		.acpi_match_table = ov2740_acpi_ids,
++		.name = "ov2740",  // 修改驱动名
++		.pm = &ov2740_pm_ops,
++		.of_match_table = ov2740_of_match,
+ 	},
+ 	.probe = ov2740_probe,
+ 	.remove = ov2740_remove,
+-	.flags = I2C_DRV_ACPI_WAIVE_D0_PROBE,
+ };
+ 
+ module_i2c_driver(ov2740_i2c_driver);
+ 
+-MODULE_AUTHOR("Qiu, Tianshu <tian.shu.qiu@intel.com>");
+-MODULE_AUTHOR("Shawn Tu");
+-MODULE_AUTHOR("Bingbu Cao <bingbu.cao@intel.com>");
+-MODULE_DESCRIPTION("OmniVision OV2740 sensor driver");
+-MODULE_LICENSE("GPL v2");
++MODULE_AUTHOR("Qiu, Tianshu <tianshu.qiu@intel.com>");
++MODULE_AUTHOR("Tu,Robin <peyoot@hotmail.com>");
++MODULE_DESCRIPTION("OmniVision OV2740 sensor driver V2");
++MODULE_LICENSE("GPL v2");
+\ No newline at end of file

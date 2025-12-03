@@ -3,8 +3,9 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += " \
-    file://ov2740.cfg \
-"
+            file://ov2740.cfg \
+            file://0001-update-ov2740-driver-with-DTS-and-24MHz-clock-suppor.patch \
+            "
 
 # 添加自定义设备树仓库
 SRC_URI:append = " \
