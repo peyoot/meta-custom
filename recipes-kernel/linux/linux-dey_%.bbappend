@@ -32,7 +32,7 @@ do_patch:append() {
 }
 
 DT_FILES = " \
-    ccmp25-softlink.dts \
+    ccmp25-viena.dts \
 "
 
 # 定义一个 Python 函数来执行安装命令
@@ -56,7 +56,7 @@ python install_dts() {
 
 # 为 ccmp25-dvk机器添加设备树和 overlay
 STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
-    ccmp25-softlink.dtb \
+    ccmp25-viena.dtb \
 "
 
 do_install:prepend:ccmp2() {
