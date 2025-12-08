@@ -2,7 +2,7 @@
 
 # 添加自定义设备树仓库
 SRC_URI:append = " \
-    git://github.com/peyoot/ccmp25_dt;branch=ccmp25-softlink;protocol=https;destsuffix=ccmp25_dt;name=ccmp25dt \
+    git://github.com/peyoot/ccmp25_dt;branch=ccmp25-viena;protocol=https;destsuffix=ccmp25_dt;name=ccmp25dt \
 "
 
 # 指定自定义设备树仓库的提交哈希

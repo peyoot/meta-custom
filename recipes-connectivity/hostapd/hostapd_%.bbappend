@@ -1,6 +1,8 @@
 # 路径扩展（通用 + ccimx9 覆盖）
 FILESEXTRAPATHS:prepend := "${THISDIR}/${BPN}:"
 
+SYSTEMD_AUTO_ENABLE = "disable"
+
 # ccimx9 专用文件（通过 MACHINEOVERRIDES 触发）
 SRC_URI:append:ccimx9 = " \
     file://hostapd_uap0.conf \

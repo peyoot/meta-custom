@@ -13,7 +13,7 @@ DEPENDS = "mjpg-streamer"
 inherit systemd
 
 SYSTEMD_SERVICE:${PN} = "mjpg_streamer.service"
-SYSTEMD_AUTO_ENABLE = "enable"
+SYSTEMD_AUTO_ENABLE = "disable"
 
 do_install() {
     # 安装服务脚本
