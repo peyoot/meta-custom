@@ -5,6 +5,7 @@ LICENSE = "CLOSED"
 FILESEXTRAPATHS:prepend := "${THISDIR}/files:" 
 RPROVIDES:${PN} += "${PN}" 
 SRC_URI = "file://.profile \
+        file://.localconf \
         file://wl_autochannel.sh \
         file://readme.txt"
 # Specify where to get the files
@@ -17,6 +18,7 @@ do_install() {
         # extra files need to go in the respective directories
         install -m 0644 ${WORKDIR}/.profile ${D}/root/
         install -m 0644 ${WORKDIR}/readme.txt ${D}/root/
+        install -m 0755 ${WORKDIR}/.localconf ${D}/root/
         install -m 0755 ${WORKDIR}/wl_autochannel.sh ${D}/root/
 }
 
