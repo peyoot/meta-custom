@@ -1,0 +1,38 @@
+# 设置默认的Qt平台（针对STM32MP25优化）
+QT_QPA_DEFAULT_PLATFORM = "eglfs"
+
+# STM32特定的eglfs配置
+QT_QPA_EGLFS_INTEGRATION = "eglfs_kms"
+#QT_QPA_EGLFS_KMS_CONFIG = "/etc/qt5/eglfs_kms_config.json"
+
+IMAGE_INSTALL:append = " \
+    qtbase \
+    qtbase-plugins \
+    qtdeclarative \
+    qtquickcontrols2 \
+    qtquickcontrols2-qmlplugins \
+    qtgraphicaleffects \
+    qt5everywheredemo \
+    qtdeclarative-qmlplugins \
+    qtquickcontrols-qmlplugins \
+    qtquickcontrols2-qmlplugins \
+    wayland \
+    qtwayland \
+    libxkbcommon \
+    libegl \
+    libgles2 \
+    mesa \
+"
+
+PACKAGECONFIG:append:pn-qtquickcontrols = " widgetstyle"
+PACKAGECONFIG:append:pn-qtquickcontrols2 = " widgetstyle"
+
+PACKAGECONFIG:remove:pn-qtbase = "x11 xcb"
+PACKAGECONFIG:append:pn-qtbase = " gles2 egl eglfs wayland gbm kms"
+
+IMAGE_INSTALL:append = " \
+    ttf-dejavu-sans \
+    ttf-dejavu-sans-mono \
+    ttf-dejavu-serif \
+    fontconfig-utils \
+"
