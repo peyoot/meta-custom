@@ -1,3 +1,8 @@
+DISTRO_FEATURES:append = " rt opengl pam  hwlatdetect"
+DISTRO_FEATURES:remove = "wayland x11"
+
+IMAGE_FEATURES:append = " ssh-server-openssh"
+
 # 设置默认的Qt平台（针对STM32MP25优化）
 QT_QPA_DEFAULT_PLATFORM = "eglfs"
 
@@ -16,20 +21,36 @@ IMAGE_INSTALL:append = " \
     qtdeclarative-qmlplugins \
     qtquickcontrols-qmlplugins \
     qtquickcontrols2-qmlplugins \
+    qtquick3d qt3d qtcharts qtmultimedia qtsvg \
+  qtserialport qtsensors qtwebsockets qtvirtualkeyboard \
+  qtremoteobjects cinematicexperience-rhi \
     wayland \
     qtwayland \
     libxkbcommon \
+    libdrm \
     libegl \
     libgles2 \
+    tslib \
+    iproute2 numactl i2c-tools perl opkg \
     mesa \
 "
 
-PACKAGECONFIG:append:pn-qtquickcontrols = " widgetstyle"
-PACKAGECONFIG:append:pn-qtquickcontrols2 = " widgetstyle"
+IMAGE_INSTALL:remove = " wayland wayland-protocols libxkbcommon libinput libevdev mtdev"
+IMAGE_INSTALL:append = " util-linux-chrt util-linux-taskset util-linux-lscpu"
 
+PACKAGE_EXCLUDE:append = " modemmanager ppp"
+
+# 配置qtbase
 PACKAGECONFIG:remove:pn-qtbase = "x11 xcb"
-PACKAGECONFIG:append:pn-qtbase = " gles2 egl eglfs wayland gbm kms"
+PACKAGECONFIG:append:pn-qtbase = " gles2 egl gbm kms eglfs"
 
+RDEPENDS:packagegroup-dey-core:remove = "connectcore-demo-example"
+CELLULAR_PKGS= ""
+CCCS_PKGS = ""
+CC_DEMO_PACKAGE = ""
+
+
+# 字体支持
 IMAGE_INSTALL:append = " \
     ttf-dejavu-sans \
     ttf-dejavu-sans-mono \
