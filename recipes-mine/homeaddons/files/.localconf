@@ -41,8 +41,10 @@ IMAGE_INSTALL:append = " util-linux-chrt util-linux-taskset util-linux-lscpu"
 PACKAGE_EXCLUDE:append = " modemmanager ppp"
 
 # 配置qtbase
-PACKAGECONFIG:remove:pn-qtbase = "x11 xcb"
+PACKAGECONFIG:remove:pn-qtbase = " x11 xcb"
 PACKAGECONFIG:append:pn-qtbase = " gles2 egl gbm kms eglfs"
+
+PACKAGECONFIG:remove:pn-gstreamer1.0-plugins-bad = " vulkan"
 
 RDEPENDS:packagegroup-dey-core:remove = "connectcore-demo-example"
 CELLULAR_PKGS= ""

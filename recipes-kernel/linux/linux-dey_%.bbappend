@@ -3,8 +3,7 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += " \
-            file://ov2740.cfg \
-            file://0001-update-ov2740-driver-with-DTS-and-24MHz-clock-suppor.patch \
+            file://fragment.cfg \
             "
 
 # 添加自定义设备树仓库
@@ -21,8 +20,8 @@ SRCREV_FORMAT = "default_ccmp25dt"
 
 # 确保配置片段被应用
 do_configure:append() {
-    if [ -f ${WORKDIR}/ov2740.cfg ]; then
-        cat ${WORKDIR}/ov2740.cfg >> ${B}/.config
+    if [ -f ${WORKDIR}/fragment.cfg ]; then
+        cat ${WORKDIR}/fragment.cfg >> ${B}/.config
     fi
 }
 
