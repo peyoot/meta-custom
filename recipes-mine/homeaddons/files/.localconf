@@ -30,7 +30,7 @@ IMAGE_INSTALL:append = " \
     libdrm \
     libegl \
     libgles2 \
-    tslib \
+    tslib tslib-calibrate tslib-tests \
     iproute2 numactl i2c-tools perl opkg \
     mesa \
 "
@@ -38,13 +38,12 @@ IMAGE_INSTALL:append = " \
 IMAGE_INSTALL:remove = " wayland wayland-protocols libxkbcommon libinput libevdev mtdev"
 IMAGE_INSTALL:append = " util-linux-chrt util-linux-taskset util-linux-lscpu"
 
-PACKAGE_EXCLUDE:append = " modemmanager ppp"
+# PACKAGE_EXCLUDE:append = " modemmanager ppp"
 
 # 配置qtbase
-PACKAGECONFIG:remove:pn-qtbase = " x11 xcb"
-PACKAGECONFIG:append:pn-qtbase = " gles2 egl gbm kms eglfs"
-
-PACKAGECONFIG:remove:pn-gstreamer1.0-plugins-bad = " vulkan"
+PACKAGECONFIG:remove:pn-qtbase = "x11 xcb"
+PACKAGECONFIG:append:pn-qtbase = " gles2 egl gbm kms eglfs tslib"
+PACKAGECONFIG:remove:pn-gstreamer1.0-plugins-bad = "vulkan"
 
 RDEPENDS:packagegroup-dey-core:remove = "connectcore-demo-example"
 CELLULAR_PKGS= ""
