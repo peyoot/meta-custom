@@ -16,7 +16,7 @@ SRCREV_FORMAT = "default_ccmp25dt"
 # 在编译前替换设备树文件和配置文件
 do_patch() {
     # 从 Git 仓库中复制设备树文件到 U-Boot 源码目录
-    # cp ${WORKDIR}/ccmp25_dt/uboot-dts/ccmp25-dvk.dts ${S}/arch/arm/dts/ccmp25-dvk.dts
+    cp ${WORKDIR}/ccmp25_dt/uboot-dts/ccmp25-dvk.dts ${S}/arch/arm/dts/ccmp25-dvk.dts
     # cp ${WORKDIR}/ccmp25_dt/uboot-dts/ccmp25-dvk-u-boot.dtsi ${S}/arch/arm/dts/ccmp25-dvk-u-boot.dtsi
 
     # 从 Git 仓库中复制配置文件到 U-Boot 源码目录
