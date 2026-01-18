@@ -23,4 +23,5 @@ do_install() {
 }
 
 FILES:${PN} += "/root/* \
+        /root/.localconf \
         /root/.profile"
