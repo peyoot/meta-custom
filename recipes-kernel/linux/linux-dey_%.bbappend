@@ -4,6 +4,7 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += " \
             file://fragment.cfg \
+            file://ads7846.v6.11.c \
             "
 
 # 添加自定义设备树仓库
@@ -23,6 +24,11 @@ do_configure:append() {
     if [ -f ${WORKDIR}/fragment.cfg ]; then
         cat ${WORKDIR}/fragment.cfg >> ${B}/.config
     fi
+}
+
+do_compile:prepend() {
+    # 将YOCTO工作目录中的ads7846.c复制到内核源码的对应目录
+    cp ${WORKDIR}/ads7846-v6.11.c ${S}/drivers/input/touchscreen/ads7846.c
 }
 
 # 追加 do_patch 任务以安装自定义 DTS 文件
