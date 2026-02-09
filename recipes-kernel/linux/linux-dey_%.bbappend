@@ -4,7 +4,7 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += " \
             file://fragment.cfg \
-            file://ads7846.v6.11.c \
+            file://ads7846-v6.11.c \
             "
 
 # 添加自定义设备树仓库
