@@ -855,6 +855,11 @@ static void ads7846_report_state(struct ads7846 *ts)
 	} else {
 		z1 = packet->z1;
 		z2 = packet->z2;
+		// 处理大屏 z1 > z2 反转
+	    if (z1 > z2) {
+	        swap(z1, z2);
+	        dev_vdbg(&ts->spi->dev, "Swapped z1/z2: original %d/%d\n", packet->z1, packet->z2);
+	    }
 	}
 
 	/* range filtering */
