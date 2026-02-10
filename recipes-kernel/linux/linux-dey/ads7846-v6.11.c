@@ -643,6 +643,8 @@ static int ads7846_debounce_filter(void *ads, int data_idx, int *val)
 {
 	struct ads7846 *ts = ads;
 
+	dev_dbg(&ts->spi->dev, "Filter: data_idx=%d, val=%d, last_read=%d\n", data_idx, *val, ts->last_read);
+
 	if (!ts->read_cnt || (abs(ts->last_read - *val) > ts->debounce_tol)) {
 		/* Start over collecting consistent readings. */
 		ts->read_rep = 0;
@@ -652,6 +654,7 @@ static int ads7846_debounce_filter(void *ads, int data_idx, int *val)
 		 */
 		if (ts->read_cnt < ts->debounce_max) {
 			ts->last_read = *val;
+			dev_dbg(&ts->spi->dev, "Filter: Inconsistent, repeat (cnt=%d)\n", ts->read_cnt);
 			ts->read_cnt++;
 			return ADS7846_FILTER_REPEAT;
 		} else {
@@ -661,6 +664,7 @@ static int ads7846_debounce_filter(void *ads, int data_idx, int *val)
 			 * the whole sample, repeat it in the next sampling
 			 * period.
 			 */
+			dev_dbg(&ts->spi->dev, "Filter: Max debounce reached, ignore\n");
 			ts->read_cnt = 0;
 			return ADS7846_FILTER_IGNORE;
 		}
@@ -670,11 +674,13 @@ static int ads7846_debounce_filter(void *ads, int data_idx, int *val)
 			 * Got a good reading for this coordinate,
 			 * go for the next one.
 			 */
+			dev_dbg(&ts->spi->dev, "Filter: Good reading, OK (rep=%d)\n", ts->read_rep);
 			ts->read_cnt = 0;
 			ts->read_rep = 0;
 			return ADS7846_FILTER_OK;
 		} else {
 			/* Read more values that are consistent. */
+			dev_dbg(&ts->spi->dev, "Filter: Consistent, repeat more (rep=%d)\n", ts->read_rep);
 			ts->read_cnt++;
 			return ADS7846_FILTER_REPEAT;
 		}
@@ -819,6 +825,7 @@ static void ads7846_read_state(struct ads7846 *ts)
 	struct spi_message *m;
 	int msg_idx = 0;
 	int error;
+	int loop_count = 0;
 
 	packet->last_cmd_idx = 0;
 
@@ -829,14 +836,21 @@ static void ads7846_read_state(struct ads7846 *ts)
 		error = spi_sync(ts->spi, m);
 		if (error) {
 			dev_err_ratelimited(&ts->spi->dev, "spi_sync --> %d\n", error);
+			dev_dbg(&ts->spi->dev, "Read: SPI error in loop %d\n", loop_count);
 			packet->ignore = true;
 			return;
 		}
 
 		error = ads7846_filter(ts);
 		if (error)
+		    dev_dbg(&ts->spi->dev, "Read: Filter error %d in loop %d\n", error, loop_count);
 			continue;
-
+		loop_count++;
+        if (loop_count > 50) {  // 安全阀，防死循环
+            dev_warn(&ts->spi->dev, "Read: Loop exceeded max, abort\n");
+            packet->ignore = true;
+            return;
+        }
 		return;
 	}
 }
@@ -855,6 +869,7 @@ static void ads7846_report_state(struct ads7846 *ts)
 	} else {
 		z1 = packet->z1;
 		z2 = packet->z2;
+		dev_dbg(&ts->spi->dev, "Report: Raw z1=%u, z2=%u, x=%u, y=%u\n", z1, z2, x, y);
 		// 处理大屏 z1 > z2 反转
 	    if (z1 > z2) {
 	        swap(z1, z2);
@@ -879,6 +894,7 @@ static void ads7846_report_state(struct ads7846 *ts)
 		Rt = DIV_ROUND_CLOSEST(Rt, 256);
 	} else {
 		Rt = 0;
+		dev_dbg(&ts->spi->dev, "Report: Rt=0 (x=%u or z1=0)\n", x);
 	}
 
 	/*
@@ -886,6 +902,7 @@ static void ads7846_report_state(struct ads7846 *ts)
 	 * the maximum. Don't report it to user space, repeat at least
 	 * once more the measurement
 	 */
+	dev_dbg(&ts->spi->dev, "Report: Check ignore=%d, Rt=%u, max=%u\n", packet->ignore, Rt, ts->pressure_max);
 	if (packet->ignore || Rt > ts->pressure_max) {
 		dev_vdbg(&ts->spi->dev, "ignored %d pressure %d\n",
 			 packet->ignore, Rt);
