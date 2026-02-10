@@ -842,11 +842,12 @@ static void ads7846_read_state(struct ads7846 *ts)
 		}
 
 		error = ads7846_filter(ts);
-		if (error)
+		if (error) {
 		    dev_dbg(&ts->spi->dev, "Read: Filter error %d in loop %d\n", error, loop_count);
 			continue;
+		}
 		loop_count++;
-        if (loop_count > 50) {  // 安全阀，防死循环
+        if (loop_count > 200) {  // 安全阀，防死循环
             dev_warn(&ts->spi->dev, "Read: Loop exceeded max, abort\n");
             packet->ignore = true;
             return;
