@@ -31,6 +31,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/module.h>
 #include <asm/unaligned.h>
+#include <linux/swap.h>
 
 /*
  * This code has been heavily tested on a Nokia 770, and lightly
@@ -788,6 +789,7 @@ static int ads7846_filter(struct ads7846 *ts)
 				ads7846_set_cmd_val(ts, cmd_idx, val);
 				break;
 			} else {
+				ts->last_read = 0;
 				packet->ignore = true;
 				return 0;
 			}
@@ -832,6 +834,7 @@ static void ads7846_read_state(struct ads7846 *ts)
 	while (true) {
 		if (!get_pendown_state(ts)) {  // 如果 pen up，立即返回
             packet->ignore = true;
+			dev_dbg(&ts->spi->dev, "Pen up detected, skip sampling\n");
             return;
         }
 		ads7846_wait_for_hsync(ts);
@@ -961,19 +964,19 @@ static irqreturn_t ads7846_irq(int irq, void *handle)
 {
 	struct ads7846 *ts = handle;
 
-	/* Start with a small delay before checking pendown state */
-	msleep(TS_POLL_DELAY);
+	/* Start with a small delay before checking pendown state  -rm	msleep(TS_POLL_DELAY);  */
+	udelay(100);
 
-	while (!ts->stopped && get_pendown_state(ts)) {
-
+	/* while (!ts->stopped && get_pendown_state(ts)) { */
+	if (get_pendown_state(ts)) {
 		/* pen is down, continue with the measurement */
 		ads7846_read_state(ts);
 
 		if (!ts->stopped)
 			ads7846_report_state(ts);
 
-		wait_event_timeout(ts->wait, ts->stopped,
-				   msecs_to_jiffies(TS_POLL_PERIOD));
+		/* wait_event_timeout(ts->wait, ts->stopped, */
+		/*		   msecs_to_jiffies(TS_POLL_PERIOD)); */
 	}
 
 	if (ts->pendown && !ts->stopped)
@@ -1242,6 +1245,7 @@ static int ads7846_probe(struct spi_device *spi)
 
 	if (!spi->irq) {
 		dev_dbg(dev, "no IRQ?\n");
+		dev_err(&spi->dev, "No IRQ, disabling driver\n");
 		return -EINVAL;
 	}
 
