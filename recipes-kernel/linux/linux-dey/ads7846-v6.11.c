@@ -56,7 +56,7 @@
  */
 
  /* 自定义版本信息 */
-#define DRIVER_VERSION "6.11-custom-1.0-20260209"
+#define DRIVER_VERSION "6.11-custom-1.1-20260211"
 
 
 #define TS_POLL_DELAY	1	/* ms delay before the first sample */
@@ -1460,5 +1460,5 @@ static struct spi_driver ads7846_driver = {
 
 module_spi_driver(ads7846_driver);
 
-MODULE_DESCRIPTION("ADS7846 TouchScreen Driver");
+MODULE_DESCRIPTION("ADS7846 TouchScreen Driver Digi v1.1");
 MODULE_LICENSE("GPL");
