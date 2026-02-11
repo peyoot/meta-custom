@@ -830,8 +830,11 @@ static void ads7846_read_state(struct ads7846 *ts)
 	packet->last_cmd_idx = 0;
 
 	while (true) {
+		if (!get_pendown_state(ts)) {  // 如果 pen up，立即返回
+            packet->ignore = true;
+            return;
+        }
 		ads7846_wait_for_hsync(ts);
-
 		m = &ts->msg[msg_idx];
 		error = spi_sync(ts->spi, m);
 		if (error) {
