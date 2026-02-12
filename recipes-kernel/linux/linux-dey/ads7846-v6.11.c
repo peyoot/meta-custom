@@ -780,6 +780,11 @@ static int ads7846_filter(struct ads7846 *ts)
 
 		for (b = l->skip; b < l->count; b++) {
 			val = ads7846_get_value(&packet->rx[l->offset + b]);
+			/* add debug info*/
+			u16 raw = be16_to_cpup(&packet->rx[l->offset + b].data);
+			dev_info(&ts->spi->dev, 
+			         "CMD_IDX=%d, RAW16=0x%04X, VAL12=0x%03X, PEN=%d",
+        			 cmd_idx, raw, val, get_pendown_state(ts));
 
 			action = ts->filter(ts->filter_data, cmd_idx, &val);
 			if (action == ADS7846_FILTER_REPEAT) {
