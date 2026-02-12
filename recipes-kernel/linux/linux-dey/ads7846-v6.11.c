@@ -56,8 +56,8 @@
  */
 
  /* 自定义版本信息 */
-#define DRIVER_VERSION "6.11-custom-1.1-20260211"
-
+#define DRIVER_VERSION "6.11-custom-1.2-20260212"
+/* add spi debug info */
 
 #define TS_POLL_DELAY	1	/* ms delay before the first sample */
 #define TS_POLL_PERIOD	5	/* ms delay between samples */
