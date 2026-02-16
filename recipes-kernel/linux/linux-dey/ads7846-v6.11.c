@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/pm.h>
 #include <linux/property.h>
+#include <linux/pinctrl/pinconf-generic.h> 
 #include <linux/gpio/consumer.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/ads7846.h>
@@ -1321,6 +1322,17 @@ static int ads7846_probe(struct spi_device *spi)
 	err = ads7846_setup_pendown(spi, ts, pdata);
 	if (err)
 		return err;
+
+	if (ts->gpio_pendown && !IS_ERR(ts->gpio_pendown)) {
+    	unsigned long config = PIN_CONF_PACKED(PIN_CONFIG_BIAS_DISABLE, 0);
+    	int ret = gpiod_set_config(ts->gpio_pendown, config);
+    	if (ret) {
+        	/* 配置失败并不致命，但应警告 */
+        	dev_warn(&spi->dev, "Failed to set GPIO bias-disable: %d\n", ret);
+    	} else {
+        	dev_dbg(&spi->dev, "GPIO pendown internal pull disabled\n");
+    	}
+	}
 
 	if (pdata->penirq_recheck_delay_usecs)
 		ts->penirq_recheck_delay_usecs =
