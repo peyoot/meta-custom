@@ -1118,6 +1118,10 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 	/*
 	 * when enable settle_samples, every position sampling twice
 	 * skip first charging one，count still is 1（valid sampling）
+	 * usage: 
+	 *     ti,settle-samples;
+     *     ti,settle-delay-usec = <50>;
+	 * 
 	 */
 	if (ts->settle_samples) {
 		packet->count = 1;		/* valid sample is one */
