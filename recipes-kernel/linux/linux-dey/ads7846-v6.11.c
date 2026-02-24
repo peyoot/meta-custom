@@ -778,8 +778,6 @@ static int ads7846_filter(struct ads7846 *ts)
 	for (cmd_idx = packet->last_cmd_idx; cmd_idx < packet->cmds - 1; cmd_idx++) {
 		struct ads7846_buf_layout *l = &packet->l[cmd_idx];
 
-		int sample_offset = l->offset + l->skip; /* skip captive charging samples */
-
 		packet->last_cmd_idx = cmd_idx;
 
 		for (b = l->skip; b < l->count; b++) {
@@ -1097,7 +1095,6 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 	struct ads7846_packet *packet = ts->packet;
 	int vref = pdata->keep_vref_on;
 	unsigned int count, offset = 0;
-	unsigned int cmd_idx, b;
 	unsigned long time;
 	size_t size = 0;
 	u32 charge_delay = ads7846_get_charge_delay(&ts->spi->dev);
@@ -1135,17 +1132,14 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 
 	/* transfer count for settle_samples */
 	int xfer_count = 0;
- 	for (cmd_idx = 0; cmd_idx < packet->cmds; cmd_idx++) {
-		if (cmd_idx == packet->cmds - 1) {
-			/* PWDOWN for one */
+ 	for (int idx = 0; idx < packet->cmds; idx++) {
+		if (idx == packet->cmds - 1) {
 			xfer_count++;
 		} else {
-			if (ts->settle_samples) {
-				/* charge + delay + valid */
+			if (ts->settle_samples)
 				xfer_count += 3;
-			} else {
+			else
 				xfer_count += packet->count + packet->count_skip;
-			}
 		}
 	}
 
@@ -1172,18 +1166,10 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 		offset += max_count;
 		l->count = max_count;
 		
-		if (ts->settle_samples && cmd_idx != packet->cmds - 1) {
-			/* skip first one（sampling in charging） */
-			l->skip = 1;
-			/*The count is set to 1, but there are actually two data entries. We only take the second one in the filter.
-			Note: The count remains 2, but in the filter, we only process the last one.
-			To simplify, we still use the count_skip mechanism, but the filter logic needs to be adjusted.
-		*/
-		} else {
+		if (ts->settle_samples && cmd_idx != packet->cmds - 1)
+			l->skip = 1; /* skip first one（sampling in charging） */
+		else
 			l->skip = packet->count_skip;
-		}
-		l->count = max_count;
-		l->skip = (ts->settle_samples && cmd_idx != packet->cmds - 1) ? 1 : packet->count_skip;
 
 		size += sizeof(*packet->tx) * max_count;
 	}
@@ -1224,14 +1210,13 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 		if (cmd_idx == ADS7846_PWDOWN || !ts->settle_samples) {
 			/* 普通模式或PWDOWN：一次传输发送所有采样（count次） */
 			struct ads7846_buf_layout *l = &packet->l[cmd_idx];
-			int i;
-			for (i = 0; i < l->count; i++) {
+			for (int i = 0; i < l->count; i++) {
 				packet->tx[tx_offset + i].cmd = cmd;
 			}
-			xfer[xfer_index].tx_buf = &packet->tx[tx_offset];
-			xfer[xfer_index].rx_buf = &packet->rx[rx_offset];
-			xfer[xfer_index].len = l->count * sizeof(*packet->tx);
-			spi_message_add_tail(&xfer[xfer_index], m);
+			x[xfer_index].tx_buf = &packet->tx[tx_offset];
+			x[xfer_index].rx_buf = &packet->rx[rx_offset];
+			x[xfer_index].len = l->count * sizeof(*packet->tx);
+			spi_message_add_tail(&x[xfer_index], m);
 			xfer_index++;
 			tx_offset += l->count;
 			rx_offset += l->count;
@@ -1239,30 +1224,32 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 			/* 充电采样模式：每个坐标三次传输：充电采样、延迟、有效采样 */
 			/* 充电采样 */
 			packet->tx[tx_offset].cmd = cmd;
-			xfer[xfer_index].tx_buf = &packet->tx[tx_offset];
-			xfer[xfer_index].rx_buf = &packet->rx[rx_offset];
-			xfer[xfer_index].len = sizeof(*packet->tx);
-			spi_message_add_tail(&xfer[xfer_index], m);
+			x[xfer_index].tx_buf = &packet->tx[tx_offset];
+			x[xfer_index].rx_buf = &packet->rx[rx_offset];
+			x[xfer_index].len = l->count * sizeof(*packet->tx);
+			spi_message_add_tail(&x[xfer_index], m);
 			xfer_index++;
-			tx_offset++; rx_offset++;
+			tx_offset++; 
+			rx_offset++;
 
 			/* 延迟传输（如果 charge_delay > 0） */
 			if (charge_delay > 0) {
-				memset(&xfer[xfer_index], 0, sizeof(xfer[xfer_index]));
-				xfer[xfer_index].delay.value = charge_delay;
-				xfer[xfer_index].delay.unit = SPI_DELAY_UNIT_USECS;
-				spi_message_add_tail(&xfer[xfer_index], m);
+				memset(&x[xfer_index], 0, sizeof(x[xfer_index]));
+				x[xfer_index].delay.value = charge_delay;
+				x[xfer_index].delay.unit = SPI_DELAY_UNIT_USECS;
+				spi_message_add_tail(&x[xfer_index], m);
 				xfer_index++;
 			}
 
 			/* 有效采样 */
 			packet->tx[tx_offset].cmd = cmd;
-			xfer[xfer_index].tx_buf = &packet->tx[tx_offset];
-			xfer[xfer_index].rx_buf = &packet->rx[rx_offset];
-			xfer[xfer_index].len = sizeof(*packet->tx);
-			spi_message_add_tail(&xfer[xfer_index], m);
+			x[xfer_index].tx_buf = &packet->tx[tx_offset];
+			x[xfer_index].rx_buf = &packet->rx[rx_offset];
+			x[xfer_index].len = sizeof(*packet->tx);
+			spi_message_add_tail(&x[xfer_index], m);
 			xfer_index++;
-			tx_offset++; rx_offset++;
+			tx_offset++; 
+			rx_offset++;
 		}
 	}
 
