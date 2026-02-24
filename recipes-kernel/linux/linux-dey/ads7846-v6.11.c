@@ -1098,6 +1098,7 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 	unsigned long time;
 	size_t size = 0;
 	u32 charge_delay = ads7846_get_charge_delay(&ts->spi->dev);
+	int cmd_idx;  /* 声明循环变量 */
 
 	/* time per bit */
 	ts->settle_samples = ads7846_get_settle_samples(&ts->spi->dev);
@@ -1107,32 +1108,23 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 	packet->count_skip = DIV_ROUND_UP(count, 24);
 
 	if (ts->debounce_max && ts->debounce_rep)
-		/* ads7846_debounce_filter() is making ts->debounce_rep + 2
-		 * reads. So we need to get all samples for normal case. */
 		packet->count = ts->debounce_rep + 2;
 	else
 		packet->count = 1;
-	/*
-	 * when enable settle_samples, every position sampling twice
-	 * skip first charging one，count still is 1（valid sampling）
-	 * usage: 
-	 *     ti,settle-samples;
-     *     ti,settle-delay-usec = <50>;
-	 * 
-	 */
+
 	if (ts->settle_samples) {
-		packet->count = 1;		/* valid sample is one */
-		packet->count_skip = 1;	/* skip first one */
+		packet->count = 1;
+		packet->count_skip = 1;
 	}
 
 	if (ts->model == 7846)
-		packet->cmds = 5; /* x, y, z1, z2, pwdown */
+		packet->cmds = 5;
 	else
-		packet->cmds = 3; /* x, y, pwdown */
+		packet->cmds = 3;
 
-	/* transfer count for settle_samples */
+	/* 计算传输数（仅用于内部逻辑，未使用结果）*/
 	int xfer_count = 0;
- 	for (int idx = 0; idx < packet->cmds; idx++) {
+	for (int idx = 0; idx < packet->cmds; idx++) {
 		if (idx == packet->cmds - 1) {
 			xfer_count++;
 		} else {
@@ -1143,31 +1135,30 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 		}
 	}
 
-	/* allocate buffer for settle_samples */
+	/* 分配缓冲区 */
 	size = 0;
-
 	for (cmd_idx = 0; cmd_idx < packet->cmds; cmd_idx++) {
 		struct ads7846_buf_layout *l = &packet->l[cmd_idx];
 		unsigned int max_count;
+		int effective_cmd = cmd_idx;
 
-		if (cmd_idx == packet->cmds - 1)
-			cmd_idx = ADS7846_PWDOWN;
+		if (effective_cmd == packet->cmds - 1)
+			effective_cmd = ADS7846_PWDOWN;
 
-		if (ads7846_cmd_need_settle(cmd_idx))
+		if (ads7846_cmd_need_settle(effective_cmd))
 			max_count = packet->count + packet->count_skip;
 		else
 			max_count = packet->count;
 
-		/* for settle_samples, each position actually send twice（chaging+valid） */
-		if (ts->settle_samples && cmd_idx != packet->cmds - 1)
-			max_count = 2; 
+		if (ts->settle_samples && effective_cmd != ADS7846_PWDOWN)
+			max_count = 2;
 
 		l->offset = offset;
 		offset += max_count;
 		l->count = max_count;
-		
-		if (ts->settle_samples && cmd_idx != packet->cmds - 1)
-			l->skip = 1; /* skip first one（sampling in charging） */
+
+		if (ts->settle_samples && effective_cmd != ADS7846_PWDOWN)
+			l->skip = 1;
 		else
 			l->skip = packet->count_skip;
 
@@ -1183,11 +1174,6 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 		return -ENOMEM;
 
 	if (ts->model == 7873) {
-		/*
-		 * The AD7873 is almost identical to the ADS7846
-		 * keep VREF off during differential/ratiometric
-		 * conversion modes.
-		 */
 		ts->model = 7846;
 		vref = 0;
 	}
@@ -1196,23 +1182,25 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 	spi_message_init(m);
 	m->context = ts;
 
-	/* build transfer  */
+	/* 构建传输 */
 	int xfer_index = 0;
 	unsigned int tx_offset = 0;
 	unsigned int rx_offset = 0;
 
 	for (cmd_idx = 0; cmd_idx < packet->cmds; cmd_idx++) {
 		u8 cmd;
-		if (cmd_idx == packet->cmds - 1)
-			cmd_idx = ADS7846_PWDOWN;
-		cmd = ads7846_get_cmd(cmd_idx, vref);
+		int effective_cmd = cmd_idx;
 
-		if (cmd_idx == ADS7846_PWDOWN || !ts->settle_samples) {
-			/* 普通模式或PWDOWN：一次传输发送所有采样（count次） */
+		if (effective_cmd == packet->cmds - 1)
+			effective_cmd = ADS7846_PWDOWN;
+		cmd = ads7846_get_cmd(effective_cmd, vref);
+
+		if (effective_cmd == ADS7846_PWDOWN || !ts->settle_samples) {
+			/* 普通模式或 PWDOWN：一次传输所有采样 */
 			struct ads7846_buf_layout *l = &packet->l[cmd_idx];
-			for (int i = 0; i < l->count; i++) {
+			for (int i = 0; i < l->count; i++)
 				packet->tx[tx_offset + i].cmd = cmd;
-			}
+
 			x[xfer_index].tx_buf = &packet->tx[tx_offset];
 			x[xfer_index].rx_buf = &packet->rx[rx_offset];
 			x[xfer_index].len = l->count * sizeof(*packet->tx);
@@ -1221,15 +1209,15 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 			tx_offset += l->count;
 			rx_offset += l->count;
 		} else {
-			/* 充电采样模式：每个坐标三次传输：充电采样、延迟、有效采样 */
+			/* 充电采样模式：充电采样、延迟、有效采样 */
 			/* 充电采样 */
 			packet->tx[tx_offset].cmd = cmd;
 			x[xfer_index].tx_buf = &packet->tx[tx_offset];
 			x[xfer_index].rx_buf = &packet->rx[rx_offset];
-			x[xfer_index].len = l->count * sizeof(*packet->tx);
+			x[xfer_index].len = sizeof(*packet->tx);  /* 单次传输长度 */
 			spi_message_add_tail(&x[xfer_index], m);
 			xfer_index++;
-			tx_offset++; 
+			tx_offset++;
 			rx_offset++;
 
 			/* 延迟传输（如果 charge_delay > 0） */
@@ -1248,7 +1236,7 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 			x[xfer_index].len = sizeof(*packet->tx);
 			spi_message_add_tail(&x[xfer_index], m);
 			xfer_index++;
-			tx_offset++; 
+			tx_offset++;
 			rx_offset++;
 		}
 	}
