@@ -969,27 +969,35 @@ static irqreturn_t ads7846_hard_irq(int irq, void *handle)
 
 static irqreturn_t ads7846_irq(int irq, void *handle)
 {
-	struct ads7846 *ts = handle;
+    struct ads7846 *ts = handle;
+    int poll_delay = TS_POLL_PERIOD; /* 默认轮询间隔 5ms */
 
-	/* Start with a small delay before checking pendown state  -rm	msleep(TS_POLL_DELAY);  */
-	udelay(100);
+    /* 笔按下时进入轮询模式 */
+    while (!ts->stopped && get_pendown_state(ts)) {
+        /* 每次测量前的小延迟，用于电容稳定（可配置） */
+        if (ts->penirq_recheck_delay_usecs)
+            udelay(ts->penirq_recheck_delay_usecs);
 
-	/* while (!ts->stopped && get_pendown_state(ts)) { */
-	if (get_pendown_state(ts)) {
-		/* pen is down, continue with the measurement */
-		ads7846_read_state(ts);
+        ads7846_read_state(ts);
 
-		if (!ts->stopped)
-			ads7846_report_state(ts);
+        if (!ts->stopped)
+            ads7846_report_state(ts);
 
-		/* wait_event_timeout(ts->wait, ts->stopped, */
-		/*		   msecs_to_jiffies(TS_POLL_PERIOD)); */
-	}
+        /* 轮询间隔，避免忙等 */
+        if (ts->pendown) {
+            /* 使用 msleep 让出 CPU，注意不能在原子上下文 */
+            msleep(poll_delay);
+        } else {
+            /* 笔已抬起，退出循环 */
+            break;
+        }
+    }
 
-	if (ts->pendown && !ts->stopped)
-		ads7846_report_pen_up(ts);
+    /* 笔抬起时报告抬起事件 */
+    if (ts->pendown && !ts->stopped)
+        ads7846_report_pen_up(ts);
 
-	return IRQ_HANDLED;
+    return IRQ_HANDLED;
 }
 
 static int ads7846_suspend(struct device *dev)
@@ -1074,13 +1082,13 @@ static bool ads7846_get_settle_samples(struct device *dev)
 }
 
 /*
- * get ti,settle-delay-usec as charge delay
-*/
-static u32 ads7846_get_charge_delay(struct device *dev)
+ * 获取设备树中 ti,settle-delay-usec，用于两次采样间的延迟
+ */
+static u32 ads7846_get_settle_delay(struct device *dev)
 {
-	u32 delay = 0;
-	device_property_read_u32(dev, "ti,settle-delay-usec", &delay);
-	return delay;
+    u32 delay = 0;
+    device_property_read_u32(dev, "ti,settle-delay-usec", &delay);
+    return delay;
 }
 
 /*
@@ -1088,160 +1096,114 @@ static u32 ads7846_get_charge_delay(struct device *dev)
  * use formula #2 for pressure, not #3.
  */
 static int ads7846_setup_spi_msg(struct ads7846 *ts,
-				  const struct ads7846_platform_data *pdata)
+                  const struct ads7846_platform_data *pdata)
 {
-	struct spi_message *m = &ts->msg[0];
-	struct spi_transfer *x = ts->xfer;
-	struct ads7846_packet *packet = ts->packet;
-	int vref = pdata->keep_vref_on;
-	unsigned int count, offset = 0;
-	unsigned long time;
-	size_t size = 0;
-	u32 charge_delay = ads7846_get_charge_delay(&ts->spi->dev);
-	int cmd_idx;  /* 声明循环变量 */
+    struct spi_message *m = &ts->msg[0];
+    struct spi_transfer *x = ts->xfer;
+    struct ads7846_packet *packet = ts->packet;
+    int vref = pdata->keep_vref_on;
+    unsigned int count, offset = 0;
+    unsigned long time;
+    size_t size = 0;
+    u32 settle_delay = ads7846_get_settle_delay(&ts->spi->dev);
+    int cmd_idx, i;
 
-	/* time per bit */
-	ts->settle_samples = ads7846_get_settle_samples(&ts->spi->dev);
-	time = NSEC_PER_SEC / ts->spi->max_speed_hz;
+    ts->settle_samples = ads7846_get_settle_samples(&ts->spi->dev);
 
-	count = pdata->settle_delay_usecs * NSEC_PER_USEC / time;
-	packet->count_skip = DIV_ROUND_UP(count, 24);
+    /* 计算每个坐标的基础采样次数 count（由 debounce 决定） */
+    time = NSEC_PER_SEC / ts->spi->max_speed_hz;
+    count = pdata->settle_delay_usecs * NSEC_PER_USEC / time;
+    packet->count_skip = DIV_ROUND_UP(count, 24);
 
-	if (ts->debounce_max && ts->debounce_rep)
-		packet->count = ts->debounce_rep + 2;
-	else
-		packet->count = 1;
+    if (ts->debounce_max && ts->debounce_rep)
+        packet->count = ts->debounce_rep + 2;
+    else
+        packet->count = 1;
 
-	if (ts->settle_samples) {
-		packet->count = 1;
-		packet->count_skip = 1;
-	}
+    /* 连续采样模式下，每个坐标实际传输的次数 = 2（充电 + 有效） */
+    int samples_per_coord = ts->settle_samples ? 2 : packet->count;
 
-	if (ts->model == 7846)
-		packet->cmds = 5;
-	else
-		packet->cmds = 3;
+    /* 命令数量：X, Y, Z1, Z2, PWDOWN (或 X, Y, PWDOWN) */
+    if (ts->model == 7846)
+        packet->cmds = 5;
+    else
+        packet->cmds = 3;
 
-	/* 计算传输数（仅用于内部逻辑，未使用结果）*/
-	int xfer_count = 0;
-	for (int idx = 0; idx < packet->cmds; idx++) {
-		if (idx == packet->cmds - 1) {
-			xfer_count++;
-		} else {
-			if (ts->settle_samples)
-				xfer_count += 3;
-			else
-				xfer_count += packet->count + packet->count_skip;
-		}
-	}
+    /* 第一步：分配缓冲区，并填充 layout 信息 */
+    for (cmd_idx = 0; cmd_idx < packet->cmds; cmd_idx++) {
+        struct ads7846_buf_layout *l = &packet->l[cmd_idx];
+        int effective_cmd = (cmd_idx == packet->cmds - 1) ? ADS7846_PWDOWN : cmd_idx;
+        unsigned int max_count;
 
-	/* 分配缓冲区 */
-	size = 0;
-	for (cmd_idx = 0; cmd_idx < packet->cmds; cmd_idx++) {
-		struct ads7846_buf_layout *l = &packet->l[cmd_idx];
-		unsigned int max_count;
-		int effective_cmd = cmd_idx;
+        if (ads7846_cmd_need_settle(effective_cmd))
+            max_count = samples_per_coord + packet->count_skip;
+        else
+            max_count = samples_per_coord;
 
-		if (effective_cmd == packet->cmds - 1)
-			effective_cmd = ADS7846_PWDOWN;
+        l->offset = offset;
+        offset += max_count;
+        l->count = max_count;
+        l->skip = packet->count_skip; /* 默认跳过 count_skip 个 */
 
-		if (ads7846_cmd_need_settle(effective_cmd))
-			max_count = packet->count + packet->count_skip;
-		else
-			max_count = packet->count;
+        /* 连续采样模式下，跳过第一次采样（充电采样） */
+        if (ts->settle_samples && effective_cmd != ADS7846_PWDOWN)
+            l->skip = 1;
 
-		if (ts->settle_samples && effective_cmd != ADS7846_PWDOWN)
-			max_count = 2;
+        size += sizeof(*packet->tx) * max_count;
+    }
 
-		l->offset = offset;
-		offset += max_count;
-		l->count = max_count;
+    /* 分配 DMA 安全的缓冲区 */
+    packet->tx = devm_kzalloc(&ts->spi->dev, size, GFP_KERNEL);
+    if (!packet->tx)
+        return -ENOMEM;
+    packet->rx = devm_kzalloc(&ts->spi->dev, size, GFP_KERNEL);
+    if (!packet->rx)
+        return -ENOMEM;
 
-		if (ts->settle_samples && effective_cmd != ADS7846_PWDOWN)
-			l->skip = 1;
-		else
-			l->skip = packet->count_skip;
+    /* 处理 AD7873 的特殊性 */
+    if (ts->model == 7873) {
+        ts->model = 7846;
+        vref = 0;
+    }
 
-		size += sizeof(*packet->tx) * max_count;
-	}
+    /* 第二步：构建 SPI 消息 */
+    ts->msg_count = 1;
+    spi_message_init(m);
+    m->context = ts;
 
-	packet->tx = devm_kzalloc(&ts->spi->dev, size, GFP_KERNEL);
-	if (!packet->tx)
-		return -ENOMEM;
+    int xfer_idx = 0;
+    unsigned int tx_off = 0, rx_off = 0;
 
-	packet->rx = devm_kzalloc(&ts->spi->dev, size, GFP_KERNEL);
-	if (!packet->rx)
-		return -ENOMEM;
+    for (cmd_idx = 0; cmd_idx < packet->cmds; cmd_idx++) {
+        struct ads7846_buf_layout *l = &packet->l[cmd_idx];
+        int effective_cmd = (cmd_idx == packet->cmds - 1) ? ADS7846_PWDOWN : cmd_idx;
+        u8 cmd = ads7846_get_cmd(effective_cmd, vref);
 
-	if (ts->model == 7873) {
-		ts->model = 7846;
-		vref = 0;
-	}
+        /* 预填充命令字节到 tx 缓冲区 */
+        for (i = 0; i < l->count; i++)
+            packet->tx[tx_off + i].cmd = cmd;
 
-	ts->msg_count = 1;
-	spi_message_init(m);
-	m->context = ts;
+        /* 创建传输：一次性发送 l->count 个命令和数据 */
+        x[xfer_idx].tx_buf = &packet->tx[tx_off];
+        x[xfer_idx].rx_buf = &packet->rx[rx_off];
+        x[xfer_idx].len = l->count * sizeof(*packet->tx);
+        spi_message_add_tail(&x[xfer_idx], m);
+        xfer_idx++;
 
-	/* 构建传输 */
-	int xfer_index = 0;
-	unsigned int tx_offset = 0;
-	unsigned int rx_offset = 0;
+        /* 如果是连续采样模式且不是 PWDOWN，在两次采样之间插入延迟传输 */
+        if (ts->settle_samples && effective_cmd != ADS7846_PWDOWN && settle_delay > 0) {
+            memset(&x[xfer_idx], 0, sizeof(x[xfer_idx]));
+            x[xfer_idx].delay.value = settle_delay;
+            x[xfer_idx].delay.unit = SPI_DELAY_UNIT_USECS;
+            spi_message_add_tail(&x[xfer_idx], m);
+            xfer_idx++;
+        }
 
-	for (cmd_idx = 0; cmd_idx < packet->cmds; cmd_idx++) {
-		u8 cmd;
-		int effective_cmd = cmd_idx;
+        tx_off += l->count;
+        rx_off += l->count;
+    }
 
-		if (effective_cmd == packet->cmds - 1)
-			effective_cmd = ADS7846_PWDOWN;
-		cmd = ads7846_get_cmd(effective_cmd, vref);
-
-		if (effective_cmd == ADS7846_PWDOWN || !ts->settle_samples) {
-			/* 普通模式或 PWDOWN：一次传输所有采样 */
-			struct ads7846_buf_layout *l = &packet->l[cmd_idx];
-			for (int i = 0; i < l->count; i++)
-				packet->tx[tx_offset + i].cmd = cmd;
-
-			x[xfer_index].tx_buf = &packet->tx[tx_offset];
-			x[xfer_index].rx_buf = &packet->rx[rx_offset];
-			x[xfer_index].len = l->count * sizeof(*packet->tx);
-			spi_message_add_tail(&x[xfer_index], m);
-			xfer_index++;
-			tx_offset += l->count;
-			rx_offset += l->count;
-		} else {
-			/* 充电采样模式：充电采样、延迟、有效采样 */
-			/* 充电采样 */
-			packet->tx[tx_offset].cmd = cmd;
-			x[xfer_index].tx_buf = &packet->tx[tx_offset];
-			x[xfer_index].rx_buf = &packet->rx[rx_offset];
-			x[xfer_index].len = sizeof(*packet->tx);  /* 单次传输长度 */
-			spi_message_add_tail(&x[xfer_index], m);
-			xfer_index++;
-			tx_offset++;
-			rx_offset++;
-
-			/* 延迟传输（如果 charge_delay > 0） */
-			if (charge_delay > 0) {
-				memset(&x[xfer_index], 0, sizeof(x[xfer_index]));
-				x[xfer_index].delay.value = charge_delay;
-				x[xfer_index].delay.unit = SPI_DELAY_UNIT_USECS;
-				spi_message_add_tail(&x[xfer_index], m);
-				xfer_index++;
-			}
-
-			/* 有效采样 */
-			packet->tx[tx_offset].cmd = cmd;
-			x[xfer_index].tx_buf = &packet->tx[tx_offset];
-			x[xfer_index].rx_buf = &packet->rx[rx_offset];
-			x[xfer_index].len = sizeof(*packet->tx);
-			spi_message_add_tail(&x[xfer_index], m);
-			xfer_index++;
-			tx_offset++;
-			rx_offset++;
-		}
-	}
-
-	return 0;
+    return 0;
 }
 
 static const struct of_device_id ads7846_dt_ids[] = {
