@@ -117,7 +117,7 @@ struct ads7846 {
 
 	struct ads7846_packet	*packet;
 
-	struct spi_transfer	xfer[18];
+	struct spi_transfer	xfer[30];
 	struct spi_message	msg[5];
 	int			msg_count;
 	wait_queue_head_t	wait;
@@ -789,12 +789,12 @@ static int ads7846_filter(struct ads7846 *ts)
 
 		for (b = l->skip; b < l->count; b++) {
 			val = ads7846_get_value(&packet->rx[l->offset + b]);
-			/* add debug info
+			/* add debug info */
 			u16 raw = be16_to_cpup(&packet->rx[l->offset + b].data);
 			dev_info(&ts->spi->dev, 
 			         "CMD_IDX=%d, RAW16=0x%04X, VAL12=0x%03X, PEN=%d",
         			 cmd_idx, raw, val, get_pendown_state(ts));
-			*/
+			
 			action = ts->filter(ts->filter_data, cmd_idx, &val);
 			if (action == ADS7846_FILTER_REPEAT && !ts->settle_samples) {
 				if (b == l->count - 1)
@@ -1185,6 +1185,7 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 		struct ads7846_buf_layout *l = &packet->l[cmd_idx];
 		int effective_cmd = (cmd_idx == packet->cmds - 1) ? ADS7846_PWDOWN : cmd_idx;
 		u8 cmd = ads7846_get_cmd(effective_cmd, vref);
+		dev_info(&ts->spi->dev, "CMD[%d] = 0x%02x\n", effective_cmd, cmd);
 
 		/* 填充命令到 tx 缓冲区 */
 		for (i = 0; i < l->count; i++)
