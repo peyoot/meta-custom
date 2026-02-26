@@ -1359,15 +1359,13 @@ static int ads7846_probe(struct spi_device *spi)
 	}
 
 	/* 在此处添加 CS 调试信息 */
-	if (gpio_is_valid(spi->cs_gpio)) {
-    	int cs_value = gpio_get_value(spi->cs_gpio);
-    	bool active_low = false;
-    	if (spi->cs_gpio_desc)
-        	active_low = gpiod_is_active_low(spi->cs_gpio_desc);
-    	dev_info(dev, "CS GPIO %d, current value = %d, active low = %d\n",
-             	spi->cs_gpio, cs_value, active_low);
+	if (spi->cs_gpiod) {
+    	int cs_value = gpiod_get_value(spi->cs_gpiod);
+    	bool active_low = gpiod_is_active_low(spi->cs_gpiod);
+    	dev_info(dev, "CS GPIO desc, current value = %d, active low = %d\n",
+             	cs_value, active_low);
 	} else {
-    	dev_info(dev, "CS is hardware-controlled (no GPIO)\n");
+    	dev_info(dev, "CS is hardware-controlled (no GPIO descriptor)\n");
 	}
 
 	ts->model = pdata->model ? : 7846;
