@@ -370,9 +370,12 @@ static int ads7846_read12_ser(struct device *dev, unsigned command)
 
 	spi_message_init(&req->msg);
 
+	dev_info(dev, "ads7846_read12_ser: command=0x%02x\n", command);
+
 	/* maybe turn on internal vREF, and let it settle */
 	if (ts->use_internal) {
 		req->ref_on = REF_ON;
+		dev_info(dev, "  sending REF_ON=0x%02x\n", req->ref_on);
 		req->xfer[0].tx_buf = &req->ref_on;
 		req->xfer[0].len = 1;
 		spi_message_add_tail(&req->xfer[0], &req->msg);
@@ -394,6 +397,7 @@ static int ads7846_read12_ser(struct device *dev, unsigned command)
 
 	/* take sample */
 	req->command = (u8) command;
+	dev_info(dev, "  sending command=0x%02x\n", req->command);
 	req->xfer[2].tx_buf = &req->command;
 	req->xfer[2].len = 1;
 	spi_message_add_tail(&req->xfer[2], &req->msg);
@@ -406,6 +410,7 @@ static int ads7846_read12_ser(struct device *dev, unsigned command)
 
 	/* converter in low power mode & enable PENIRQ */
 	req->ref_off = PWRDOWN;
+	dev_info(dev, "  sending PWRDOWN=0x%02x\n", req->ref_off);
 	req->xfer[4].tx_buf = &req->ref_off;
 	req->xfer[4].len = 1;
 	spi_message_add_tail(&req->xfer[4], &req->msg);
@@ -424,6 +429,8 @@ static int ads7846_read12_ser(struct device *dev, unsigned command)
 	if (status == 0) {
 		/* on-wire is a must-ignore bit, a BE12 value, then padding */
 		status = be16_to_cpu(req->sample);
+		dev_info(dev, "  received sample=0x%04x (after shift: %d)\n",
+                 be16_to_cpu(req->sample), status >> 3);
 		status = status >> 3;
 		status &= 0x0fff;
 	}
@@ -962,6 +969,7 @@ static void ads7846_report_state(struct ads7846 *ts)
 static irqreturn_t ads7846_hard_irq(int irq, void *handle)
 {
 	struct ads7846 *ts = handle;
+	dev_info(&ts->spi->dev, "ads7846_hard_irq: entered\n");
 
 	return get_pendown_state(ts) ? IRQ_WAKE_THREAD : IRQ_HANDLED;
 }
@@ -971,6 +979,7 @@ static irqreturn_t ads7846_irq(int irq, void *handle)
 {
     struct ads7846 *ts = handle;
     int poll_delay = TS_POLL_PERIOD; /* 默认轮询间隔 5ms */
+	dev_info(&ts->spi->dev, "ads7846_irq: entered\n");
 
     /* 笔按下时进入轮询模式 */
     while (!ts->stopped && get_pendown_state(ts)) {
@@ -1349,6 +1358,18 @@ static int ads7846_probe(struct spi_device *spi)
 			return PTR_ERR(pdata);
 	}
 
+	/* 在此处添加 CS 调试信息 */
+	if (gpio_is_valid(spi->cs_gpio)) {
+    	int cs_value = gpio_get_value(spi->cs_gpio);
+    	bool active_low = false;
+    	if (spi->cs_gpio_desc)
+        	active_low = gpiod_is_active_low(spi->cs_gpio_desc);
+    	dev_info(dev, "CS GPIO %d, current value = %d, active low = %d\n",
+             	spi->cs_gpio, cs_value, active_low);
+	} else {
+    	dev_info(dev, "CS is hardware-controlled (no GPIO)\n");
+	}
+
 	ts->model = pdata->model ? : 7846;
 	ts->vref_delay_usecs = pdata->vref_delay_usecs ? : 100;
 	ts->x_plate_ohms = pdata->x_plate_ohms ? : 400;
@@ -1368,17 +1389,27 @@ static int ads7846_probe(struct spi_device *spi)
 
 	err = ads7846_setup_pendown(spi, ts, pdata);
 	if (err)
-		return err;
+    	return err;
 
 	if (ts->gpio_pendown && !IS_ERR(ts->gpio_pendown)) {
+    	/* 读取并打印初始状态 */
+    	int val = gpiod_get_value(ts->gpio_pendown);
+    	int dir = gpiod_get_direction(ts->gpio_pendown);
+    	dev_info(dev, "pendown GPIO: initial value=%d, direction=%s\n",
+             	val, dir == 0 ? "out" : "in");
+
+    	/* 尝试禁用内部上拉 */
     	unsigned long config = PIN_CONF_PACKED(PIN_CONFIG_BIAS_DISABLE, 0);
     	int ret = gpiod_set_config(ts->gpio_pendown, config);
     	if (ret) {
-        	/* 配置失败并不致命，但应警告 */
-        	dev_warn(&spi->dev, "Failed to set GPIO bias-disable: %d\n", ret);
+        	dev_warn(dev, "Failed to set GPIO bias-disable: %d\n", ret);
     	} else {
-        	dev_dbg(&spi->dev, "GPIO pendown internal pull disabled\n");
+        	dev_info(dev, "GPIO pendown internal pull disabled\n");
     	}
+
+    	/* 再次读取值，看是否变化（不应变化） */
+    	val = gpiod_get_value(ts->gpio_pendown);
+    	dev_info(dev, "pendown GPIO after config: value=%d\n", val);
 	}
 
 	if (pdata->penirq_recheck_delay_usecs)
@@ -1454,23 +1485,25 @@ static int ads7846_probe(struct spi_device *spi)
     	irq_flags = IRQF_TRIGGER_FALLING;
 	irq_flags |= IRQF_ONESHOT;
 
+	dev_info(dev, "Requesting IRQ %d with flags 0x%lx\n", spi->irq, irq_flags);
 	err = devm_request_threaded_irq(dev, spi->irq,
-					ads7846_hard_irq, ads7846_irq,
-					irq_flags, dev->driver->name, ts);
+                	ads7846_hard_irq, ads7846_irq,
+                	irq_flags, dev->driver->name, ts);
 	if (err && err != -EPROBE_DEFER && !pdata->irq_flags) {
-		dev_info(dev,
-			"trying pin change workaround on irq %d\n", spi->irq);
-		irq_flags |= IRQF_TRIGGER_RISING;
-		err = devm_request_threaded_irq(dev, spi->irq,
-						ads7846_hard_irq, ads7846_irq,
-						irq_flags, dev->driver->name,
-						ts);
+    	dev_info(dev,
+        	"trying pin change workaround on irq %d\n", spi->irq);
+    	irq_flags |= IRQF_TRIGGER_RISING;
+    	err = devm_request_threaded_irq(dev, spi->irq,
+                    	ads7846_hard_irq, ads7846_irq,
+                    	irq_flags, dev->driver->name,
+                    	ts);
 	}
 
 	if (err) {
-		dev_dbg(dev, "irq %d busy?\n", spi->irq);
-		return err;
+    	dev_err(dev, "Failed to request IRQ %d: %d\n", spi->irq, err);
+    	return err;
 	}
+	dev_info(dev, "IRQ %d registered successfully\n", spi->irq);
 
 	err = ads784x_hwmon_register(spi, ts);
 	if (err)
