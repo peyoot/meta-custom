@@ -1105,7 +1105,7 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 	unsigned int count, offset = 0;
 	unsigned long time;
 	size_t size = 0;
-	u32 settle_delay = ads7846_get_charge_delay(&ts->spi->dev);
+	u32 settle_delay = ads7846_get_settle_delay(&ts->spi->dev);
 	int cmd_idx, i;
 
 	ts->settle_samples = ads7846_get_settle_samples(&ts->spi->dev);
