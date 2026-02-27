@@ -1549,6 +1549,9 @@ static int ads7846_probe(struct spi_device *spi)
 	else
 		(void) ads7846_read12_ser(dev, PWRDOWN);
 
+	if (ts->model != 7845)
+    	(void) ads7846_read12_ser(dev, READ_12BIT_SER(vaux));
+
 	err = input_register_device(input_dev);
 	if (err)
 		return err;
