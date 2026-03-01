@@ -57,7 +57,7 @@
  */
 
  /* 自定义版本信息 */
-#define DRIVER_VERSION "6.11-custom-1.3-20260225"
+#define DRIVER_VERSION "6.11-custom-1.4-20260301-auto-pendown polarity"
 /* add spi debug info */
 
 #define TS_POLL_DELAY	1	/* ms delay before the first sample */
@@ -148,6 +148,9 @@ struct ads7846 {
 	struct gpio_desc	*gpio_hsync;
 
 	void			(*wait_for_sync)(void);
+
+	bool			polarity_known;		/* 是否已检测到极性 */
+	int				pressed_value;		/* 按下时 gpiod_get_value 的返回值 */
 };
 
 enum ads7846_filter {
@@ -225,10 +228,17 @@ enum ads7846_cmds {
 
 static int get_pendown_state(struct ads7846 *ts)
 {
-	if (ts->get_pendown_state)
-		return ts->get_pendown_state();
+	int val;
+    if (ts->get_pendown_state)
+        return ts->get_pendown_state();
+    val = gpiod_get_value(ts->gpio_pendown);
 
-	return gpiod_get_value(ts->gpio_pendown);
+    /* 如果极性未知，直接返回原始值（用于初始判断） */
+    if (!ts->polarity_known)
+        return val;
+
+    /* 极性已知：返回 1 表示按下，0 表示抬起 */
+    return (val == ts->pressed_value) ? 1 : 0;
 }
 
 static void ads7846_report_pen_up(struct ads7846 *ts)
@@ -970,8 +980,12 @@ static irqreturn_t ads7846_hard_irq(int irq, void *handle)
 {
 	struct ads7846 *ts = handle;
 	dev_info(&ts->spi->dev, "ads7846_hard_irq: entered\n");
+	/* 如果极性未知，直接唤醒线程进行检测 */
+    if (!ts->polarity_known)
+        return IRQ_WAKE_THREAD;
 
-	return get_pendown_state(ts) ? IRQ_WAKE_THREAD : IRQ_HANDLED;
+    /* 极性已知，根据真实笔状态决定是否唤醒 */
+    return get_pendown_state(ts) ? IRQ_WAKE_THREAD : IRQ_HANDLED;
 }
 
 
@@ -981,9 +995,24 @@ static irqreturn_t ads7846_irq(int irq, void *handle)
     int poll_delay = TS_POLL_PERIOD; /* 默认轮询间隔 5ms */
 	dev_info(&ts->spi->dev, "ads7846_irq: entered\n");
 
+	/* ---------- 新增：极性检测 ---------- */
+    if (!ts->polarity_known) {
+        int val = gpiod_get_value(ts->gpio_pendown);
+        /* 假设当前中断是由按下引起的，记录此值为按下有效值 */
+        ts->pressed_value = val;
+        ts->polarity_known = true;
+        dev_info(&ts->spi->dev,
+                 "Auto-detected pendown polarity: pressed_value=%d\n",
+                 ts->pressed_value);
+        /* 如果当前读取的值不是按下状态（例如误触发），直接返回 */
+        if (val != ts->pressed_value) {
+            dev_info(&ts->spi->dev, "Spurious interrupt, ignoring\n");
+            return IRQ_HANDLED;
+        }
+    }
+
     /* 笔按下时进入轮询模式 */
     while (!ts->stopped && get_pendown_state(ts)) {
-        /* 每次测量前的小延迟，用于电容稳定（可配置） */
         if (ts->penirq_recheck_delay_usecs)
             udelay(ts->penirq_recheck_delay_usecs);
 
@@ -994,7 +1023,6 @@ static irqreturn_t ads7846_irq(int irq, void *handle)
 
         /* 轮询间隔，避免忙等 */
         if (ts->pendown) {
-            /* 使用 msleep 让出 CPU，注意不能在原子上下文 */
             msleep(poll_delay);
         } else {
             /* 笔已抬起，退出循环 */
@@ -1374,6 +1402,9 @@ static int ads7846_probe(struct spi_device *spi)
 		return -ENOMEM;
 
 	spi_set_drvdata(spi, ts);
+
+	ts->polarity_known = false;
+	ts->pressed_value = 0;  /* 初始值任意，后续会被覆盖 */
 
 	ts->packet = packet;
 	ts->spi = spi;
