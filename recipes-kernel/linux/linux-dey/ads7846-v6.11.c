@@ -1439,27 +1439,27 @@ static int ads7846_probe(struct spi_device *spi)
 
 	err = ads7846_setup_pendown(spi, ts, pdata);
 	if (err)
-    	return err;
+		return err;
 
 	if (ts->gpio_pendown && !IS_ERR(ts->gpio_pendown)) {
-    	/* 读取并打印初始状态 */
-    	int val = gpiod_get_value(ts->gpio_pendown);
-    	int dir = gpiod_get_direction(ts->gpio_pendown);
-    	dev_info(dev, "pendown GPIO: initial value=%d, direction=%s\n",
-             	val, dir == 0 ? "out" : "in");
+		/* 读取并打印初始状态 */
+		int val = gpiod_get_value(ts->gpio_pendown);
+		int dir = gpiod_get_direction(ts->gpio_pendown);
+		dev_info(dev, "pendown GPIO: initial value=%d, direction=%s\n",
+			 val, dir == 0 ? "out" : "in");
 
-    	/* 尝试禁用内部上拉 */
-    	unsigned long config = PIN_CONF_PACKED(PIN_CONFIG_BIAS_DISABLE, 0);
-    	int ret = gpiod_set_config(ts->gpio_pendown, config);
-    	if (ret) {
-        	dev_warn(dev, "Failed to set GPIO bias-disable: %d\n", ret);
-    	} else {
-        	dev_info(dev, "GPIO pendown internal pull disabled\n");
-    	}
+		/* 尝试禁用内部上拉 */
+		unsigned long config = PIN_CONF_PACKED(PIN_CONFIG_BIAS_DISABLE, 0);
+		int ret = gpiod_set_config(ts->gpio_pendown, config);
+		if (ret) {
+			dev_warn(dev, "Failed to set GPIO bias-disable: %d\n", ret);
+		} else {
+			dev_info(dev, "GPIO pendown internal pull disabled\n");
+		}
 
-    	/* 再次读取值，看是否变化（不应变化） */
-    	val = gpiod_get_value(ts->gpio_pendown);
-    	dev_info(dev, "pendown GPIO after config: value=%d\n", val);
+		/* 再次读取值，看是否变化（不应变化） */
+		val = gpiod_get_value(ts->gpio_pendown);
+		dev_info(dev, "pendown GPIO after config: value=%d\n", val);
 	}
 
 	if (pdata->penirq_recheck_delay_usecs)
@@ -1530,48 +1530,56 @@ static int ads7846_probe(struct spi_device *spi)
 	if (err)
 		return err;
 
+	/* 先注册中断 */
 	irq_flags = irq_get_trigger_type(spi->irq);
 	if (!irq_flags)
-    	irq_flags = IRQF_TRIGGER_FALLING;
+		irq_flags = IRQF_TRIGGER_FALLING;
 	irq_flags |= IRQF_ONESHOT;
 
 	dev_info(dev, "Requesting IRQ %d with flags 0x%lx\n", spi->irq, irq_flags);
 	err = devm_request_threaded_irq(dev, spi->irq,
-                	ads7846_hard_irq, ads7846_irq,
-                	irq_flags, dev->driver->name, ts);
+					ads7846_hard_irq, ads7846_irq,
+					irq_flags, dev->driver->name, ts);
 	if (err && err != -EPROBE_DEFER && !pdata->irq_flags) {
-    	dev_info(dev,
-        	"trying pin change workaround on irq %d\n", spi->irq);
-    	irq_flags |= IRQF_TRIGGER_RISING;
-    	err = devm_request_threaded_irq(dev, spi->irq,
-                    	ads7846_hard_irq, ads7846_irq,
-                    	irq_flags, dev->driver->name,
-                    	ts);
+		dev_info(dev,
+			 "trying pin change workaround on irq %d\n", spi->irq);
+		irq_flags |= IRQF_TRIGGER_RISING;
+		err = devm_request_threaded_irq(dev, spi->irq,
+						ads7846_hard_irq, ads7846_irq,
+						irq_flags, dev->driver->name,
+						ts);
 	}
 
 	if (err) {
-    	dev_err(dev, "Failed to request IRQ %d: %d\n", spi->irq, err);
-    	return err;
+		dev_err(dev, "Failed to request IRQ %d: %d\n", spi->irq, err);
+		return err;
 	}
 	dev_info(dev, "IRQ %d registered successfully\n", spi->irq);
+
+	/* 现在进行首次采样，临时禁用中断以避免虚假触发 */
+	disable_irq(spi->irq);
+
+	/* 发送 PWRDOWN 命令使芯片进入掉电模式并使能 PENIRQ */
+	if (ts->model == 7845)
+		ads7845_read12_ser(dev, PWRDOWN);
+	else
+		(void) ads7846_read12_ser(dev, PWRDOWN);
+
+	/* 等待足够时间让引脚稳定在高电平（空闲状态） */
+	msleep(50);
+
+	/* 如果需要，进行 vaux 测量（例如用于 hwmon） */
+	if (ts->model != 7845)
+		(void) ads7846_read12_ser(dev, READ_12BIT_SER(vaux));
+
+	/* 重新使能中断 */
+	enable_irq(spi->irq);
 
 	err = ads784x_hwmon_register(spi, ts);
 	if (err)
 		return err;
 
 	dev_info(dev, "touchscreen, irq %d\n", spi->irq);
-
-	/*
-	 * Take a first sample, leaving nPENIRQ active and vREF off; avoid
-	 * the touchscreen, in case it's not connected.
-	 */
-	if (ts->model == 7845)
-		ads7845_read12_ser(dev, PWRDOWN);
-	else
-		(void) ads7846_read12_ser(dev, PWRDOWN);
-
-	if (ts->model != 7845)
-    	(void) ads7846_read12_ser(dev, READ_12BIT_SER(vaux));
 
 	err = input_register_device(input_dev);
 	if (err)
