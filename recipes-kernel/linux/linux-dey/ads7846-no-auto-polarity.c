@@ -57,7 +57,7 @@
  */
 
  /* 自定义版本信息 */
-#define DRIVER_VERSION "6.11-custom-1.3-20260225"
+#define DRIVER_VERSION "6.11-custom-1.3-20260301-no-pendown-auto-polarity"
 /* add spi debug info */
 
 #define TS_POLL_DELAY	1	/* ms delay before the first sample */
