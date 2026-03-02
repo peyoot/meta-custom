@@ -380,12 +380,12 @@ static int ads7846_read12_ser(struct device *dev, unsigned command)
 
 	spi_message_init(&req->msg);
 
-	dev_info(dev, "ads7846_read12_ser: command=0x%02x\n", command);
+	/* dev_info(dev, "ads7846_read12_ser: command=0x%02x\n", command); */
 
 	/* maybe turn on internal vREF, and let it settle */
 	if (ts->use_internal) {
 		req->ref_on = REF_ON;
-		dev_info(dev, "  sending REF_ON=0x%02x\n", req->ref_on);
+		/* dev_info(dev, "  sending REF_ON=0x%02x\n", req->ref_on); */
 		req->xfer[0].tx_buf = &req->ref_on;
 		req->xfer[0].len = 1;
 		spi_message_add_tail(&req->xfer[0], &req->msg);
@@ -407,7 +407,7 @@ static int ads7846_read12_ser(struct device *dev, unsigned command)
 
 	/* take sample */
 	req->command = (u8) command;
-	dev_info(dev, "  sending command=0x%02x\n", req->command);
+	/* dev_info(dev, "  sending command=0x%02x\n", req->command); */
 	req->xfer[2].tx_buf = &req->command;
 	req->xfer[2].len = 1;
 	spi_message_add_tail(&req->xfer[2], &req->msg);
@@ -420,7 +420,7 @@ static int ads7846_read12_ser(struct device *dev, unsigned command)
 
 	/* converter in low power mode & enable PENIRQ */
 	req->ref_off = PWRDOWN;
-	dev_info(dev, "  sending PWRDOWN=0x%02x\n", req->ref_off);
+	/* dev_info(dev, "  sending PWRDOWN=0x%02x\n", req->ref_off); */
 	req->xfer[4].tx_buf = &req->ref_off;
 	req->xfer[4].len = 1;
 	spi_message_add_tail(&req->xfer[4], &req->msg);
@@ -439,8 +439,8 @@ static int ads7846_read12_ser(struct device *dev, unsigned command)
 	if (status == 0) {
 		/* on-wire is a must-ignore bit, a BE12 value, then padding */
 		status = be16_to_cpu(req->sample);
-		dev_info(dev, "  received sample=0x%04x (after shift: %d)\n",
-                 be16_to_cpu(req->sample), status >> 3);
+		/* dev_info(dev, "  received sample=0x%04x (after shift: %d)\n",
+                 be16_to_cpu(req->sample), status >> 3);  */
 		status = status >> 3;
 		status &= 0x0fff;
 	}
@@ -801,7 +801,7 @@ static int ads7846_filter(struct ads7846 *ts)
 			val = ads7846_get_value(&packet->rx[l->offset + b]);
 			/* add debug info */
 			u16 raw = be16_to_cpup(&packet->rx[l->offset + b].data);
-			dev_info(&ts->spi->dev, 
+			dev_dbg(&ts->spi->dev, 
 			         "CMD_IDX=%d, RAW16=0x%04X, VAL12=0x%03X, PEN=%d",
         			 cmd_idx, raw, val, get_pendown_state(ts));
 			
@@ -1224,7 +1224,7 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
         u8 cmd = ads7846_get_cmd(effective_cmd, vref);
 
         /* 打印命令字节以便调试 */
-        dev_info(&ts->spi->dev, "CMD[%d] = 0x%02x, samples=%d\n",
+        dev_dbg(&ts->spi->dev, "Building SPI CMD[%d] = 0x%02x, samples=%d\n",
                  effective_cmd, cmd,
                  ts->settle_samples && effective_cmd == ADS7846_X ? 2 : 1);
 
@@ -1270,7 +1270,7 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
         rx_off += l->count;
     }
 
-    dev_info(&ts->spi->dev, "Total xfers used: %d\n", xfer_idx);
+    dev_dbg(&ts->spi->dev, "Total xfers used: %d\n", xfer_idx);
     return 0;
 }
 
@@ -1418,16 +1418,6 @@ static int ads7846_probe(struct spi_device *spi)
 		pdata = ads7846_get_props(dev);
 		if (IS_ERR(pdata))
 			return PTR_ERR(pdata);
-	}
-
-	/* 在此处添加 CS 调试信息 */
-	if (spi->cs_gpiod) {
-    	int cs_value = gpiod_get_value(spi->cs_gpiod);
-    	bool active_low = gpiod_is_active_low(spi->cs_gpiod);
-    	dev_info(dev, "CS GPIO desc, current value = %d, active low = %d\n",
-             	cs_value, active_low);
-	} else {
-    	dev_info(dev, "CS is hardware-controlled (no GPIO descriptor)\n");
 	}
 
 	ts->model = pdata->model ? : 7846;
