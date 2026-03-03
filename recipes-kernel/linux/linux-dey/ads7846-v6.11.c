@@ -151,6 +151,7 @@ struct ads7846 {
 
 	bool			polarity_known;		/* 是否已检测到极性 */
 	int				pressed_value;		/* 按下时 gpiod_get_value 的返回值 */
+	int             idle_value;    /* 新增：空闲时的 GPIO 原始值 */
 };
 
 enum ads7846_filter {
@@ -992,26 +993,30 @@ static irqreturn_t ads7846_hard_irq(int irq, void *handle)
 static irqreturn_t ads7846_irq(int irq, void *handle)
 {
     struct ads7846 *ts = handle;
-    int poll_delay = TS_POLL_PERIOD; /* 默认轮询间隔 5ms */
-	dev_info(&ts->spi->dev, "ads7846_irq: entered\n");
+    int poll_delay = TS_POLL_PERIOD;
+    dev_info(&ts->spi->dev, "ads7846_irq: entered\n");
 
-	/* ---------- 新增：极性检测 ---------- */
+    /* ---------- 极性检测，加入去抖和空闲比较 ---------- */
     if (!ts->polarity_known) {
-        int val = gpiod_get_value(ts->gpio_pendown);
-        /* 假设当前中断是由按下引起的，记录此值为按下有效值 */
-        ts->pressed_value = val;
-        ts->polarity_known = true;
-        dev_info(&ts->spi->dev,
-                 "Auto-detected pendown polarity: pressed_value=%d\n",
-                 ts->pressed_value);
-        /* 如果当前读取的值不是按下状态（例如误触发），直接返回 */
-        if (val != ts->pressed_value) {
-            dev_info(&ts->spi->dev, "Spurious interrupt, ignoring\n");
+        int val1, val2;
+
+        val1 = gpiod_get_value(ts->gpio_pendown);
+        msleep(10);  // 去抖延时
+        val2 = gpiod_get_value(ts->gpio_pendown);
+
+        if (val1 == val2 && val1 != ts->idle_value) {
+            ts->pressed_value = val1;
+            ts->polarity_known = true;
+            dev_info(&ts->spi->dev,
+                     "Auto-detected pendown polarity: pressed_value=%d\n",
+                     ts->pressed_value);
+        } else {
+            dev_info(&ts->spi->dev, "Spurious IRQ, ignored\n");
             return IRQ_HANDLED;
         }
     }
 
-    /* 笔按下时进入轮询模式 */
+    /* 正常轮询处理 */
     while (!ts->stopped && get_pendown_state(ts)) {
         if (ts->penirq_recheck_delay_usecs)
             udelay(ts->penirq_recheck_delay_usecs);
@@ -1021,16 +1026,13 @@ static irqreturn_t ads7846_irq(int irq, void *handle)
         if (!ts->stopped)
             ads7846_report_state(ts);
 
-        /* 轮询间隔，避免忙等 */
         if (ts->pendown) {
             msleep(poll_delay);
         } else {
-            /* 笔已抬起，退出循环 */
             break;
         }
     }
 
-    /* 笔抬起时报告抬起事件 */
     if (ts->pendown && !ts->stopped)
         ads7846_report_pen_up(ts);
 
@@ -1405,6 +1407,7 @@ static int ads7846_probe(struct spi_device *spi)
 
 	ts->polarity_known = false;
 	ts->pressed_value = 0;  /* 初始值任意，后续会被覆盖 */
+	ts->idle_value = 0;  // 初始值
 
 	ts->packet = packet;
 	ts->spi = spi;
@@ -1445,8 +1448,9 @@ static int ads7846_probe(struct spi_device *spi)
 		/* 读取并打印初始状态 */
 		int val = gpiod_get_value(ts->gpio_pendown);
 		int dir = gpiod_get_direction(ts->gpio_pendown);
+		
 		dev_info(dev, "pendown GPIO: initial value=%d, direction=%s\n",
-			 val, dir == 0 ? "out" : "in");
+			 val, dir == 0 ? "out" : "in");    
 
 		/* 尝试禁用内部上拉 */
 		unsigned long config = PIN_CONF_PACKED(PIN_CONFIG_BIAS_DISABLE, 0);
@@ -1530,73 +1534,72 @@ static int ads7846_probe(struct spi_device *spi)
 	if (err)
 		return err;
 
-	/* 先注册中断 */
-	irq_flags = irq_get_trigger_type(spi->irq);
-	if (!irq_flags)
-		irq_flags = IRQF_TRIGGER_FALLING;
-	irq_flags |= IRQF_ONESHOT;
+	/* ---------- 重要：先让芯片进入掉电模式，使引脚稳定 ---------- */
+    if (ts->model == 7845)
+        ads7845_read12_ser(dev, PWRDOWN);
+    else
+        (void) ads7846_read12_ser(dev, PWRDOWN);
 
-	dev_info(dev, "Requesting IRQ %d with flags 0x%lx\n", spi->irq, irq_flags);
-	err = devm_request_threaded_irq(dev, spi->irq,
-					ads7846_hard_irq, ads7846_irq,
-					irq_flags, dev->driver->name, ts);
-	if (err && err != -EPROBE_DEFER && !pdata->irq_flags) {
-		dev_info(dev,
-			 "trying pin change workaround on irq %d\n", spi->irq);
-		irq_flags |= IRQF_TRIGGER_RISING;
-		err = devm_request_threaded_irq(dev, spi->irq,
-						ads7846_hard_irq, ads7846_irq,
-						irq_flags, dev->driver->name,
-						ts);
-	}
+    /* 等待足够时间让 PENIRQ 引脚稳定在高电平（空闲状态） */
+    msleep(50);
 
-	if (err) {
-		dev_err(dev, "Failed to request IRQ %d: %d\n", spi->irq, err);
-		return err;
-	}
-	dev_info(dev, "IRQ %d registered successfully\n", spi->irq);
+    /* 记录空闲时的 GPIO 原始值（物理值） */
+    if (ts->gpio_pendown && !IS_ERR(ts->gpio_pendown)) {
+        ts->idle_value = gpiod_get_value(ts->gpio_pendown);
+        dev_info(dev, "Idle GPIO value = %d\n", ts->idle_value);
+    }
 
-	/* 现在进行首次采样，临时禁用中断以避免虚假触发 */
-	disable_irq(spi->irq);
+    /* ---------- 现在注册中断 ---------- */
+    irq_flags = irq_get_trigger_type(spi->irq);
+    if (!irq_flags)
+        irq_flags = IRQF_TRIGGER_FALLING;
+    irq_flags |= IRQF_ONESHOT;
 
-	/* 发送 PWRDOWN 命令使芯片进入掉电模式并使能 PENIRQ */
-	if (ts->model == 7845)
-		ads7845_read12_ser(dev, PWRDOWN);
-	else
-		(void) ads7846_read12_ser(dev, PWRDOWN);
+    dev_info(dev, "Requesting IRQ %d with flags 0x%lx\n", spi->irq, irq_flags);
+    err = devm_request_threaded_irq(dev, spi->irq,
+                    ads7846_hard_irq, ads7846_irq,
+                    irq_flags, dev->driver->name, ts);
+    if (err && err != -EPROBE_DEFER && !pdata->irq_flags) {
+        dev_info(dev,
+             "trying pin change workaround on irq %d\n", spi->irq);
+        irq_flags |= IRQF_TRIGGER_RISING;
+        err = devm_request_threaded_irq(dev, spi->irq,
+                        ads7846_hard_irq, ads7846_irq,
+                        irq_flags, dev->driver->name,
+                        ts);
+    }
 
-	/* 等待足够时间让引脚稳定在高电平（空闲状态） */
-	msleep(50);
+    if (err) {
+        dev_err(dev, "Failed to request IRQ %d: %d\n", spi->irq, err);
+        return err;
+    }
+    dev_info(dev, "IRQ %d registered successfully\n", spi->irq);
 
-	/* 如果需要，进行 vaux 测量（例如用于 hwmon） */
-	if (ts->model != 7845)
-		(void) ads7846_read12_ser(dev, READ_12BIT_SER(vaux));
+    /* 如果需要执行 vaux 测量，可以在 disable_irq 下进行，但此时引脚已稳定，可能无需 disable */
+    disable_irq(spi->irq);  /* 可选，但为了安全保留 */
+    if (ts->model != 7845)
+        (void) ads7846_read12_ser(dev, READ_12BIT_SER(vaux));
+    enable_irq(spi->irq);
 
-	/* 重新使能中断 */
-	enable_irq(spi->irq);
+    err = ads784x_hwmon_register(spi, ts);
+    if (err)
+        return err;
 
-	err = ads784x_hwmon_register(spi, ts);
-	if (err)
-		return err;
+    dev_info(dev, "touchscreen, irq %d\n", spi->irq);
 
-	dev_info(dev, "touchscreen, irq %d\n", spi->irq);
+    err = input_register_device(input_dev);
+    if (err)
+        return err;
 
-	err = input_register_device(input_dev);
-	if (err)
-		return err;
+    device_init_wakeup(dev, pdata->wakeup);
 
-	device_init_wakeup(dev, pdata->wakeup);
+    dev_info(dev, "ADS7846 touchscreen driver, version %s\n", DRIVER_VERSION);
 
-	dev_info(dev, "ADS7846 touchscreen driver, version %s\n", DRIVER_VERSION);
+    if (!dev_get_platdata(dev))
+        devm_kfree(dev, (void *)pdata);
 
-	/*
-	 * If device does not carry platform data we must have allocated it
-	 * when parsing DT data.
-	 */
-	if (!dev_get_platdata(dev))
-		devm_kfree(dev, (void *)pdata);
+    return 0;
 
-	return 0;
 }
 
 static void ads7846_remove(struct spi_device *spi)
