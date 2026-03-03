@@ -790,9 +790,9 @@ static int ads7846_filter(struct ads7846 *ts)
 
 		for (b = l->skip; b < l->count; b++) {
 			val = ads7846_get_value(&packet->rx[l->offset + b]);
-			/* add debug info */
+			/* add debug info
 			u16 raw = be16_to_cpup(&packet->rx[l->offset + b].data);
-			/*
+			
 			dev_dbg(&ts->spi->dev, 
 			         "CMD_IDX=%d, RAW16=0x%04X, VAL12=0x%03X, PEN=%d",
         			 cmd_idx, raw, val, get_pendown_state(ts));
@@ -865,7 +865,7 @@ static void ads7846_read_state(struct ads7846 *ts)
 
 		error = ads7846_filter(ts);
 		if (error) {
-		    / * dev_dbg(&ts->spi->dev, "Read: Filter error %d in loop %d\n", error, loop_count); */
+		    /* dev_dbg(&ts->spi->dev, "Read: Filter error %d in loop %d\n", error, loop_count); */
 			continue;
 		}
 		loop_count++;
