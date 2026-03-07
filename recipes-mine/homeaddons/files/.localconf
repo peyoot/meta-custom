@@ -1,41 +1,57 @@
-DISTRO_FEATURES:append = " rt opengl pam  hwlatdetect"
 
-DISTRO_FEATURES:remove = " wayland x11"
+DISTRO_FEATURES:append = " rt opengl pam "
+DISTRO_FEATURES:remove = " wayland x11 "
 
-# IMAGE_FEATURES:append = " ssh-server-openssh"
 # 设置默认的Qt平台（针对STM32MP25优化）
 QT_QPA_DEFAULT_PLATFORM = "eglfs"
-
-# STM32特定的eglfs配置
 QT_QPA_EGLFS_INTEGRATION = "eglfs_kms"
+
 #QT_QPA_EGLFS_KMS_CONFIG = "/etc/qt5/eglfs_kms_config.json"
 
 GLIBC_GENERATE_LOCALES = "zh_CN.UTF-8 en_GB.UTF-8 en_US.UTF-8"
 IMAGE_LINGUAS = "zh-cn"
-LOCALE_UTF8_ONLY="1"
-
-IMAGE_INSTALL:append = " perf glibc-utils localedef tmux homeaddons"
+# LOCALE_UTF8_ONLY="1"
 
 IMAGE_INSTALL:append = " \
-    touch-calibration \
     qtbase \
     qtbase-plugins \
     qtdeclarative \
     qtquickcontrols2 \
     qtquickcontrols2-qmlplugins \
     qtgraphicaleffects \
+    qtgraphicaleffects-qmlplugins \
+    qtsvg \
+    qtserialport \
+    qtwebsockets \
     qt5everywheredemo \
-    qtdeclarative-qmlplugins \
-    qtquickcontrols-qmlplugins \
-    qtquickcontrols2-qmlplugins \
-    qtquick3d qt3d qtcharts qtmultimedia qtsvg \
-    qtserialport qtsensors qtwebsockets qtvirtualkeyboard \
-    qtremoteobjects \
-    libxkbcommon \
     libdrm \
     libegl \
     libgles2 \
-    tslib tslib-calibrate tslib-tests evtest \
-    iproute2 numactl i2c-tools perl opkg \
+    tslib tslib-calibrate tslib-tests \
+    homeaddons touch-calibration \
+    iproute2 i2c-tools \
     mesa \
+    evtest \
+    ttf-dejavu-sans \
+    dey-examples-rtc \
 "
+
+RDEPENDS:packagegroup-dey-core:remove = " connectcore-demo-example "
+RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager "
+CELLULAR_PKGS= ""
+CCCS_PKGS = ""
+CC_DEMO_PACKAGE = ""
+
+
+# 移除不再需要的配置，特别是明确禁用linuxfb和egl
+PACKAGECONFIG:remove:pn-qtbase = " glib x11 xcb linuxfb "
+
+# 添加DRM/KMS和硬件加速所必须的配置
+PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs egl gles2 fontconfig jpeg png gif "
+PACKAGECONFIG:remove:pn-gstreamer1.0-plugins-bad = " vulkan "
+
+IMAGE_INSTALL:remove = " wayland wayland-protocols libxkbcommon libinput libevdev \
+                         mtdev vsftpd lighttpd avahi-daemon hostapd \
+                         tools-debug \
+                         swupdate swupdate-www ssh-server-openssh \ 
+                       "
