@@ -1,17 +1,13 @@
 [Unit]
 Description=Touchscreen First-Boot Calibration
 After=systemd-udev-settle.service
-ConditionPathExists=!/etc/pointercal
 
 [Service]
 Type=oneshot
-Environment="TSLIB_TSDEVICE=/dev/input/event1"
-Environment="TSLIB_CALIBFILE=/etc/pointercal"
-Environment="TSLIB_CONFFILE=/etc/ts.conf"
 WorkingDirectory=/tmp
-ExecStart=/usr/bin/ts_calibrate
-ExecStartPost=/bin/sync
+ExecStart=/usr/bin/touch_calibration.sh
 RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
+

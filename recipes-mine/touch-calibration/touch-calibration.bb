@@ -5,6 +5,7 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda
 
 SRC_URI = " \
     file://touch_calibration.service \
+    file://touch_calibration.sh \
 "
 
 inherit systemd
@@ -13,6 +14,9 @@ SYSTEMD_SERVICE:${PN} = "touch_calibration.service"
 SYSTEMD_AUTO_ENABLE = "enable"
 
 do_install() {
+    # 安装服务脚本
+    install -d ${D}${bindir}
+    install -m 0755 ${WORKDIR}/touch_calibration.sh ${D}${bindir}/touch_calibration.sh
 
     # 安装systemd服务文件
     install -d ${D}${systemd_system_unitdir}
@@ -20,5 +24,6 @@ do_install() {
 }
 
 FILES:${PN} = " \
+    ${bindir}/touch_calibration.sh \
     ${systemd_system_unitdir}/touch_calibration.service \
 "
