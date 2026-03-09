@@ -1,6 +1,7 @@
 
 DISTRO_FEATURES:append = " rt opengl pam "
 DISTRO_FEATURES:remove = " wayland x11 cellular 3g "
+DISTRO_FEATURES:remove = " bluetooth wifi "
 
 IMAGE_INSTALL:append = " \
     qtbase \
@@ -47,6 +48,11 @@ PACKAGECONFIG:remove:pn-gstreamer1.0-plugins-bad = " vulkan "
 RDEPENDS:packagegroup-dey-core:remove = " connectcore-demo-example "
 RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager gstreamer bluetooth wifi "
 RDEPENDS:networkmanager:remove = " ppp modemmanager "
+RDEPENDS:packagegroup-machine-base:remove = "xbee-init"
+# RRECOMMENDS:packagegroup-base:remove = "xbee-init"
+
+# 禁用 swupdate 服务的自动启动（同时会禁用其 socket，因为它们属于同一配方）
+SYSTEMD_AUTO_ENABLE:pn-swupdate = "disable"
 
 
 IMAGE_INSTALL:remove = " wayland wayland-protocols libxkbcommon libinput libevdev \
