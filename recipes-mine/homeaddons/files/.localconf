@@ -1,6 +1,6 @@
 
 DISTRO_FEATURES:append = " rt opengl pam "
-DISTRO_FEATURES:remove = " wayland x11 "
+DISTRO_FEATURES:remove = " wayland x11 cellular 3g "
 
 # 设置默认的Qt平台（针对STM32MP25优化）
 QT_QPA_DEFAULT_PLATFORM = "eglfs"
@@ -10,7 +10,7 @@ QT_QPA_EGLFS_INTEGRATION = "eglfs_kms"
 
 GLIBC_GENERATE_LOCALES = "zh_CN.UTF-8 en_GB.UTF-8 en_US.UTF-8"
 IMAGE_LINGUAS = "zh-cn"
-# LOCALE_UTF8_ONLY="1"
+
 
 IMAGE_INSTALL:append = " \
     qtbase \
@@ -37,10 +37,7 @@ IMAGE_INSTALL:append = " \
 "
 
 RDEPENDS:packagegroup-dey-core:remove = " connectcore-demo-example "
-RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager "
-CELLULAR_PKGS= ""
-CCCS_PKGS = ""
-CC_DEMO_PACKAGE = ""
+RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager gstreamer "
 
 
 # 移除不再需要的配置，特别是明确禁用linuxfb和egl
@@ -52,6 +49,6 @@ PACKAGECONFIG:remove:pn-gstreamer1.0-plugins-bad = " vulkan "
 
 IMAGE_INSTALL:remove = " wayland wayland-protocols libxkbcommon libinput libevdev \
                          mtdev vsftpd lighttpd avahi-daemon hostapd \
-                         tools-debug \
-                         swupdate swupdate-www ssh-server-openssh \ 
+                         tools-debug ppp modemmanager \
+                         swupdate swupdate-www ssh-server-openssh \
                        "
