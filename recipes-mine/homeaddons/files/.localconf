@@ -2,16 +2,6 @@
 DISTRO_FEATURES:append = " rt opengl pam "
 DISTRO_FEATURES:remove = " wayland x11 cellular 3g "
 
-# 设置默认的Qt平台（针对STM32MP25优化）
-QT_QPA_DEFAULT_PLATFORM = "eglfs"
-QT_QPA_EGLFS_INTEGRATION = "eglfs_kms"
-
-#QT_QPA_EGLFS_KMS_CONFIG = "/etc/qt5/eglfs_kms_config.json"
-
-GLIBC_GENERATE_LOCALES = "zh_CN.UTF-8 en_GB.UTF-8 en_US.UTF-8"
-IMAGE_LINGUAS = "zh-cn"
-
-
 IMAGE_INSTALL:append = " \
     qtbase \
     qtbase-plugins \
@@ -36,19 +26,37 @@ IMAGE_INSTALL:append = " \
     dey-examples-rtc \
 "
 
-RDEPENDS:packagegroup-dey-core:remove = " connectcore-demo-example "
-RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager gstreamer "
+# 设置默认的Qt平台（针对STM32MP25优化）
+QT_QPA_DEFAULT_PLATFORM = "eglfs"
+QT_QPA_EGLFS_INTEGRATION = "eglfs_kms"
 
+#QT_QPA_EGLFS_KMS_CONFIG = "/etc/qt5/eglfs_kms_config.json"
 
-# 移除不再需要的配置，特别是明确禁用linuxfb和egl
-PACKAGECONFIG:remove:pn-qtbase = " glib x11 xcb linuxfb "
+GLIBC_GENERATE_LOCALES = "zh_CN.UTF-8 en_GB.UTF-8 en_US.UTF-8"
+IMAGE_LINGUAS = "zh-cn"
 
 # 添加DRM/KMS和硬件加速所必须的配置
-PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs egl gles2 fontconfig jpeg png gif "
+PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs gles2 fontconfig jpeg png gif "
+
+PACKAGECONFIG:remove:pn-networkmanager = " modemmanager"
+PACKAGECONFIG:remove:pn-networkmanager = " ppp"
+# 移除不再需要的配置，特别是明确禁用linuxfb和egl
+PACKAGECONFIG:remove:pn-qtbase = " glib x11 xcb linuxfb "
 PACKAGECONFIG:remove:pn-gstreamer1.0-plugins-bad = " vulkan "
+
+RDEPENDS:packagegroup-dey-core:remove = " connectcore-demo-example "
+RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager gstreamer bluetooth wifi "
+RDEPENDS:networkmanager:remove = " ppp modemmanager "
+
+
+
 
 IMAGE_INSTALL:remove = " wayland wayland-protocols libxkbcommon libinput libevdev \
                          mtdev vsftpd lighttpd avahi-daemon hostapd \
                          tools-debug ppp modemmanager \
                          swupdate swupdate-www ssh-server-openssh \
                        "
+
+SKIP_RECIPE[modemmanager] = "Not needed, no cellular module"
+SKIP_RECIPE[ppp] = "Not needed, no cellular module"
+SKIP_RECIPE[xbee] = "Not needed, no xbee module"
