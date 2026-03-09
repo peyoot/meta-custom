@@ -49,10 +49,9 @@ RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager gstreamer bluetoot
 RDEPENDS:networkmanager:remove = " ppp modemmanager "
 
 
-
-
 IMAGE_INSTALL:remove = " wayland wayland-protocols libxkbcommon libinput libevdev \
                          mtdev vsftpd lighttpd avahi-daemon hostapd \
+                         pulseaudio \
                          tools-debug ppp modemmanager \
                          swupdate swupdate-www ssh-server-openssh \
                        "
