@@ -4,7 +4,8 @@
 #
 # Copyright (C) 2016-2024, Digi International Inc.
 #
-require dey-image-graphical.inc
+#require dey-image-graphical.inc
+require recipes-core/images/dey-image-graphical.inc
 
 #
 # Create QT5/6 capable toolchain/SDK
