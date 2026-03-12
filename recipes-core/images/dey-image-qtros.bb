@@ -1,5 +1,7 @@
 # meta-custom/recipes-core/images/dey-image-qtros.bb
-# add ccmp25plc device tree files
+# add custom board device tree files
+
+STM32MP_KERNEL_DEVICETREE:ccmp25-dvk:append = " ccmp25-plc.dtb ccmp25-plc_pwm_do1_2.dtbo ccmp25-plc_fix_eth2_100m.dtbo ccmp25-plc_eth3.dtbo"
 
 #
 # Copyright (C) 2016-2024, Digi International Inc.
@@ -25,9 +27,6 @@ add_cinematicexperience_shortcut() {
 ROOTFS_POSTPROCESS_COMMAND:append:imxgpu = " add_cinematicexperience_shortcut"
 ROOTFS_POSTPROCESS_COMMAND:append:ccmp15 = " add_cinematicexperience_shortcut"
 ROOTFS_POSTPROCESS_COMMAND:append:ccimx93 = " add_cinematicexperience_shortcut"
-
-STM32MP_KERNEL_DEVICETREE:ccmp25-dvk:append = " ccmp25-plc.dtb ccmp25-plc_pwm_do1_2.dtbo ccmp25-plc_fix_eth2_100m.dtbo ccmp25-plc_eth3.dtbo"
-
 
 inherit ros_distro_${ROS_DISTRO}
 inherit ${ROS_DISTRO_TYPE}_image
