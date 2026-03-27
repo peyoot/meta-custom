@@ -2,7 +2,28 @@
 DISTRO_FEATURES:append = " rt opengl pam "
 DISTRO_FEATURES:remove = " wayland x11 cellular 3g "
 DISTRO_FEATURES:remove = " bluetooth wifi "
+DISTRO_FEATURES:remove = " systemd"
+DISTRO_FEATURES:append = " hwlatdetect sysvinit"
+INIT_MANAGER = "sysvinit"
+VIRTUAL-RUNTIME_init_manager = "sysvinit"
+VIRTUAL-RUNTIME_initscripts = "initscripts"
+VIRTUAL-RUNTIME_syslog = "busybox-syslog"
+VIRTUAL-RUNTIME_login_manager = "busybox"
 
+
+# 解决 systemd-compat-units 问题
+RDEPENDS:packagegroup-core-boot:remove = "systemd-compat-units"
+
+# 添加必需的启动包
+IMAGE_INSTALL:append = " \
+    busybox-syslog \
+    initscripts \
+    sysvinit \
+    sysvinit-pidof \
+    busybox-hwclock \
+    sysklogd \
+    packagegroup-core-boot \
+"
 IMAGE_INSTALL:append = " \
     qtbase \
     qtbase-plugins \
@@ -26,6 +47,8 @@ IMAGE_INSTALL:append = " \
     ttf-dejavu-sans \
     dey-examples-rtc \
 "
+IMAGE_INSTALL:append = " util-linux-chrt util-linux-taskset util-linux-lscpu"
+
 
 # 设置默认的Qt平台（针对STM32MP25优化）
 QT_QPA_DEFAULT_PLATFORM = "eglfs"
@@ -48,17 +71,18 @@ PACKAGECONFIG:remove:pn-gstreamer1.0-plugins-bad = " vulkan "
 RDEPENDS:packagegroup-dey-core:remove = " connectcore-demo-example xbee-init"
 RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager gstreamer bluetooth wifi "
 RDEPENDS:networkmanager:remove = " ppp modemmanager "
+RDEPENDS:packagegroup-machine-base:remove = "xbee-init"
 
 
 # 禁用 swupdate 服务的自动启动（同时会禁用其 socket，因为它们属于同一配方）
 SYSTEMD_AUTO_ENABLE:pn-swupdate = "disable"
 
-
 IMAGE_INSTALL:remove = " wayland wayland-protocols libxkbcommon libinput libevdev \
-                         mtdev lighttpd avahi-daemon hostapd \
+                         mtdev vsftpd lighttpd avahi-daemon hostapd \
                          pulseaudio \
                          tools-debug ppp modemmanager \
                          swupdate swupdate-www ssh-server-openssh \
+                        wpa_supplicant vsftpd bluetoothd \
                        "
 
 SKIP_RECIPE[modemmanager] = "Not needed, no cellular module"
