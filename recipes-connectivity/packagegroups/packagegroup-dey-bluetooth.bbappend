@@ -1,0 +1,1 @@
+RDEPENDS:${PN}:remove = "bluez5-init"
