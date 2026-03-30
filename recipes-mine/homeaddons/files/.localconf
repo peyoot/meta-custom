@@ -76,9 +76,15 @@ RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager gstreamer bluetoot
 RDEPENDS:networkmanager:remove = " ppp modemmanager "
 RDEPENDS:packagegroup-machine-base:remove = "xbee-init"
 # RRECOMMENDS:packagegroup-base:remove = "xbee-init"
+RDEPENDS:packagegroup-base:remove = "firmware-murata-infineon-mfgtest"
+RDEPENDS:packagegroup-base-extended:remove = "firmware-murata-infineon-mfgtest"
 
 # 禁用 swupdate 服务的自动启动（同时会禁用其 socket，因为它们属于同一配方）
 SYSTEMD_AUTO_ENABLE:pn-swupdate = "disable"
+
+# 禁用WiFi/蓝牙内核模块
+KERNEL_MODULE_AUTOLOAD:remove = "brcmfmac"
+MACHINE_ESSENTIAL_EXTRA_RDEPENDS:remove = "kernel-module-brcmfmac"
 
 # 移除蓝牙包组和相关包
 IMAGE_INSTALL:remove = " \
@@ -99,6 +105,7 @@ IMAGE_INSTALL:remove = " wayland wayland-protocols libxkbcommon libinput libevde
                          pulseaudio \
                          tools-debug ppp modemmanager \
                          tcf-agent \
+                         firmware-murata-infineon-mfgtest \
                          swupdate swupdate-www ssh-server-openssh \
                         wpa_supplicant vsftpd bluetoothd \
                        "
@@ -107,3 +114,11 @@ SKIP_RECIPE[modemmanager] = "Not needed, no cellular module"
 SKIP_RECIPE[ppp] = "Not needed, no cellular module"
 SKIP_RECIPE[xbee] = "Not needed, no xbee module"
 SKIP_RECIPE[bluez5-init] = "Not needed, no bluetooth"
+
+
+# 跳过WiFi相关固件配方
+SKIP_RECIPE[linux-firmware-addons-bcm43xx] = "No WiFi needed"
+# SKIP_RECIPE[firmware-murata-infineon] = "No WiFi needed"
+SKIP_RECIPE[firmware-qualcomm] = "No WiFi needed"
+SKIP_RECIPE[kernel-module-nxp-wlan] = "No WiFi needed"
+SKIP_RECIPE[kernel-module-qualcomm] = "No WiFi needed"
