@@ -3,6 +3,9 @@
 # 移除 connectcore-demo-example 和 CCCS 相关包
 RDEPENDS:${PN}:remove = " \
     connectcore-demo-example \
+    networkmanager \
+    networkmanager-nmcli \
+    firmware-murata-infineon-mfgtest \
     ${CCCS_PKGS} \
 "
 
