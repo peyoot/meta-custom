@@ -91,6 +91,7 @@ MACHINE_ESSENTIAL_EXTRA_RDEPENDS:remove = "kernel-module-brcmfmac"
 
 # 移除蓝牙包组和相关包
 IMAGE_INSTALL:remove = " \
+    bluetooth \
     packagegroup-dey-bluetooth \
     bluez5 \
     bluez5-init \
@@ -108,8 +109,9 @@ IMAGE_INSTALL:remove = " wayland wayland-protocols libxkbcommon libinput libevde
                          pulseaudio \
                          tools-debug ppp modemmanager \
                          tcf-agent \
+                         dbus \
                          firmware-murata-infineon-mfgtest \
-                         swupdate swupdate-www ssh-server-openssh \
+                         swupdate swupdate-www swupdate-config swupdate-tools ssh-server-openssh \
                         wpa_supplicant vsftpd bluetoothd \
                        "
 
