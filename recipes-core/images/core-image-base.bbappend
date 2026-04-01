@@ -63,7 +63,6 @@ IMAGE_INSTALL:remove = " \
 
 # 如果某些 packagegroup 强拉 dbus，可额外清理（减少 warning）
 RDEPENDS:packagegroup-dey-core:remove = "dbus"
-RDEPENDS:packagegroup-dey-network:remove = "dbus"   # 如果有的话
 
 # 阻止 dbus 服务启动（sysvinit 下）
 UPDATE-RC.D:pn-dbus = "0"
