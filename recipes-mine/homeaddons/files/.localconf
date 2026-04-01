@@ -1,17 +1,20 @@
 
+
+# ==================== 1. 切换到 sysvinit（轻量 init 系统） ====================
+DISTRO_FEATURES:remove = "systemd"
+DISTRO_FEATURES:append = " sysvinit"
+VIRTUAL-RUNTIME_init_manager = "sysvinit"
+VIRTUAL-RUNTIME_initscripts = "initscripts"
+DISTRO_FEATURES_BACKFILL_CONSIDERED:append = " systemd"
+
+# ==================== 2. 添加实时等，移除无线 ====================
+
 DISTRO_FEATURES:append = " rt opengl pam "
 DISTRO_FEATURES:remove = " wayland x11 cellular 3g "
 DISTRO_FEATURES:remove = " bluetooth wifi "
-DISTRO_FEATURES:remove = " systemd"
-DISTRO_FEATURES:append = " hwlatdetect sysvinit"
-INIT_MANAGER = "sysvinit"
-VIRTUAL-RUNTIME_init_manager = "sysvinit"
-VIRTUAL-RUNTIME_initscripts = "initscripts"
-VIRTUAL-RUNTIME_syslog = "busybox-syslog"
-VIRTUAL-RUNTIME_login_manager = "busybox"
 
-
-
+# VIRTUAL-RUNTIME_syslog = "busybox-syslog"
+# VIRTUAL-RUNTIME_login_manager = "busybox"
 
 # 解决 systemd-compat-units 问题
 RDEPENDS:packagegroup-core-boot:remove = "systemd-compat-units"
