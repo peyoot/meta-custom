@@ -55,8 +55,12 @@ SYSTEMD_AUTO_ENABLE:pn-swupdate = "0"
 IMAGE_INSTALL:remove = " \
     dbus \
     dbus-daemon \
+    dbus-common \
+    dbus-tools \
+    libdbus-1-3 \
     dbus-glib \
     dbus-lib \
+    libdbus-1 \
     libdbus \
     messagebus \
 "
@@ -66,3 +70,12 @@ RDEPENDS:packagegroup-dey-core:remove = "dbus"
 
 # 阻止 dbus 服务启动（sysvinit 下）
 UPDATE-RC.D:pn-dbus = "0"
+
+# 强制删除 systemd user 目录下的残留（dbus.service 等）
+ROOTFS_POSTPROCESS_COMMAND:append = " remove_systemd_user_files; "
+
+remove_systemd_user_files() {
+    rm -rf ${IMAGE_ROOTFS}/lib/systemd/user/dbus* ${IMAGE_ROOTFS}/lib/systemd/user/sockets.target.wants/dbus*
+    rm -rf ${IMAGE_ROOTFS}/usr/lib/systemd/user/dbus* 2>/dev/null || true
+}
+
