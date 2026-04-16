@@ -1,5 +1,6 @@
 # meta-custom/recipes-bsp/u-boot/u-boot-dey_2023.10.bbappend
 FILESEXTRAPATHS:prepend:u-boot-dey_2023.10 := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}:${THISDIR}/${BP}:"
 
 # 添加自定义设备树仓库
 SRC_URI:append = " \
@@ -13,6 +14,9 @@ SRCREV_ccmp25dt = "${AUTOREV}"
 # 定义 SRCREV_FORMAT 以分离主内核仓库和自定义仓库的版本号
 SRCREV_FORMAT = "default_ccmp25dt"
 
+SRC_URI:append:ccmp25 = " \
+    file://logo640x375.bmp \
+"
 
 # 在编译前替换设备树文件和配置文件
 do_patch() {
@@ -22,4 +26,9 @@ do_patch() {
 
     # 从 Git 仓库中复制配置文件到 U-Boot 源码目录
     cp ${WORKDIR}/ccmp25_dt/uboot/configs/ccmp25-dvk_defconfig ${S}/configs/ccmp25-dvk_defconfig
+}
+
+do_compile:prepend:ccmp25() {
+    # Replace DIGI logo with a custom image
+    cp ${WORKDIR}/logo640x375.bmp ${S}/tools/logos/digi.bmp
 }
