@@ -1,6 +1,6 @@
 # meta-custom/recipes-bsp/u-boot/u-boot-dey_2023.10.bbappend
 FILESEXTRAPATHS:prepend:u-boot-dey_2023.10 := "${THISDIR}/files:"
-FILESEXTRAPATHS:prepend := "${THISDIR}:${THISDIR}/${BP}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}:${THISDIR}:"
 
 # 添加自定义设备树仓库
 SRC_URI:append = " \
@@ -14,7 +14,7 @@ SRCREV_ccmp25dt = "${AUTOREV}"
 # 定义 SRCREV_FORMAT 以分离主内核仓库和自定义仓库的版本号
 SRCREV_FORMAT = "default_ccmp25dt"
 
-SRC_URI:append:ccmp25-dvk = " \
+SRC_URI:append:ccmp25 = " \
     file://logo640x375.bmp \
 "
 
