@@ -14,7 +14,7 @@ SRCREV_ccmp25dt = "${AUTOREV}"
 # 定义 SRCREV_FORMAT 以分离主内核仓库和自定义仓库的版本号
 SRCREV_FORMAT = "default_ccmp25dt"
 
-SRC_URI:append:ccmp25 = " \
+SRC_URI:append:ccmp25-dvk = " \
     file://logo640x375.bmp \
 "
 
