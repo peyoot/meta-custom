@@ -64,3 +64,10 @@ IMAGE_INSTALL:remove = " wayland wayland-protocols libxkbcommon libinput libevde
 SKIP_RECIPE[modemmanager] = "Not needed, no cellular module"
 SKIP_RECIPE[ppp] = "Not needed, no cellular module"
 SKIP_RECIPE[xbee] = "Not needed, no xbee module"
+
+#生产环境以下可保留，如需调试用的固件，可删除下面包，以恢复调试功能
+# 移除调试特性
+IMAGE_FEATURES:remove = "eclipse-debug dbg-pkgs tools-debug tools-profile tools-testapps dev-pkgs package-management"
+
+# 全局抑制调试符号
+INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
