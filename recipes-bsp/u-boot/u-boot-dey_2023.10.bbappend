@@ -15,7 +15,7 @@ SRCREV_ccmp25dt = "${AUTOREV}"
 SRCREV_FORMAT = "default_ccmp25dt"
 
 SRC_URI:append:ccmp25 = " \
-    file://logo640x375.bmp \
+    file://logo350x175.bmp \
 "
 
 # 在编译前替换设备树文件和配置文件
@@ -30,5 +30,5 @@ do_patch() {
 
 do_compile:prepend:ccmp25() {
     # Replace DIGI logo with a custom image
-    cp ${WORKDIR}/logo640x375.bmp ${S}/tools/logos/digi.bmp
+    cp ${WORKDIR}/logo350x175.bmp ${S}/tools/logos/digi.bmp
 }
