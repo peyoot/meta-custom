@@ -19,7 +19,7 @@ IMAGE_INSTALL:append = " \
     libegl \
     libgles2 \
     tslib tslib-calibrate tslib-tests \
-    homeaddons touch-calibration \
+    homeaddons touch-calibration dualdisplay-bl-ctl \
     iproute2 i2c-tools \
     mesa \
     evtest \

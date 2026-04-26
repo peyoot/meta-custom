@@ -1,0 +1,9 @@
+[Unit]
+Description=HDMI hotplug backlight control
+
+[Service]
+ExecStart=/usr/bin/dualdisplay_bl_ctl.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
