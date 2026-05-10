@@ -75,7 +75,10 @@ if test "${module_has_wifi}" = "1" && test -z "${disable_wifi}"; then
 	setenv disable_wifi 1
 fi
 
-setenv overlays ccmp25-viena_dualdisplay.dtbo,${overlays}
+if test -z "${enable_dualdisplay}"; then
+	setenv overlays ccmp25-viena_dualdisplay.dtbo,${overlays}
+fi
+
 
 dboot linux mmc ${mmcbootdev}:${mmcpart}
 
