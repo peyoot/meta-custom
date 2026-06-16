@@ -1,0 +1,13 @@
+[Unit]
+Description=Touchscreen First-Boot Calibration
+After=systemd-udev-settle.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/tmp
+ExecStart=/usr/bin/touch_calibration.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+
