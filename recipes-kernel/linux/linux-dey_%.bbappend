@@ -38,8 +38,12 @@ do_patch:append() {
 
 DT_FILES = " \
     ccmp25-viena.dts \
+    ccmp25-viena-hdmi.dts \
+    ccmp25-viena-dualdisplay.dts \
+    ccmp25-viena-ddisplay-rmpd2.dts \
     ccmp25-viena_ads7846.dtso \
     ccmp25-viena_hdmi.dtso \
+    ccmp25-viena_dualdisplay.dtso \
 "
 
 # 定义一个 Python 函数来执行安装命令
@@ -64,8 +68,12 @@ python install_dts() {
 # 为 ccmp25-dvk机器添加设备树和 overlay
 STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
     ccmp25-viena.dtb \
+    ccmp25-viena-hdmi.dtb \
+    ccmp25-viena-dualdisplay.dtb \
+    ccmp25-viena-ddisplay-rmpd2.dtb \
     ccmp25-viena_ads7846.dtbo \
     ccmp25-viena_hdmi.dtbo \
+    ccmp25-viena_dualdisplay.dtbo \
 "
 
 do_install:prepend:ccmp2() {
