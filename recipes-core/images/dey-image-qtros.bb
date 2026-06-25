@@ -43,6 +43,7 @@ IMAGE_INSTALL:append = " \
     ros-core \
     packagegroup-ros2-demos \
 "
+IMAGE_INSTALL:append = " kernel-image-image.gz"
 
 BOOTFS_LABEL = "BOOT"
 MKFS_VFAT_EXTRA_OPTS = "-F 32"
