@@ -43,7 +43,6 @@ IMAGE_INSTALL:append = " \
     ros-core \
     packagegroup-ros2-demos \
 "
-IMAGE_INSTALL:append = " kernel-image-image.gz"
 
 BOOTFS_LABEL = "BOOT"
 MKFS_VFAT_EXTRA_OPTS = "-F 32"
@@ -70,3 +69,9 @@ do_image_boot_vfat:append() {
         mcopy -i ${IMGDEPLOYDIR}/${IMAGE_NAME}.boot.vfat -s ${DEPLOY_DIR_IMAGE}/$src ::/$dst || true
     done
 }
+
+# 移除 kernel-image 的全局 exclude，允许 kernel 包进入 rootfs
+PACKAGE_EXCLUDE:remove = "kernel-image-*"
+
+# 确保 kernel 被安装
+IMAGE_INSTALL:append = " kernel-image-image.gz"
