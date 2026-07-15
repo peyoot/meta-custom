@@ -67,27 +67,8 @@ DISTRO_FEATURES:remove = " wayland "
 DISTRO_FEATURES:remove = " pulseaudio gstreamer "
 
 IMAGE_INSTALL:append = " \
-    qtbase \
-    qtbase-plugins \
-    qtdeclarative \
-    qtquickcontrols2 \
-    qtquickcontrols2-qmlplugins \
-    qtgraphicaleffects \
-    qtgraphicaleffects-qmlplugins \
-    qtsvg \
-    qtserialport \
-    qtwebsockets \
-    qt5everywheredemo \
-    libdrm libdrm-tests \
-    libegl \
-    libgles2 \
-    tslib tslib-calibrate tslib-tests \
-    homeaddons touch-calibration \
-    iproute2 i2c-tools \
-    mesa \
-    evtest \
-    ttf-dejavu-sans \
-    dey-examples-rtc \
+    homeaddons \
+    iproute2 \
 "
 
 IMAGE_INSTALL:append = " \
@@ -97,25 +78,12 @@ IMAGE_INSTALL:append = " \
     rt-tests \
     procps \
 "
-# 设置默认的Qt平台（针对STM32MP25优化）
-QT_QPA_DEFAULT_PLATFORM = "eglfs"
-QT_QPA_EGLFS_INTEGRATION = "eglfs_kms"
-
-#QT_QPA_EGLFS_KMS_CONFIG = "/etc/qt5/eglfs_kms_config.json"
-
-# 添加DRM/KMS和硬件加速所必须的配置
-PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs gles2 fontconfig jpeg png gif "
 
 PACKAGECONFIG:remove:pn-networkmanager = " modemmanager"
 PACKAGECONFIG:remove:pn-networkmanager = " ppp"
 # 移除不再需要的配置，特别是明确禁用linuxfb和egl
-PACKAGECONFIG:remove:pn-qtbase = " glib x11 xcb linuxfb "
-PACKAGECONFIG:remove:pn-gstreamer1.0-plugins-bad = " vulkan "
-
-RDEPENDS:packagegroup-dey-gstreamer:remove = " gstreamer1.0-plugins-good-pulseaudio "
 
 RDEPENDS:packagegroup-dey-core:remove = " connectcore-demo-example xbee-init "
-RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager gstreamer bluetooth wifi "
 RDEPENDS:networkmanager:remove = " ppp modemmanager "
 RDEPENDS:packagegroup-machine-base:remove = " xbee-init"
 
