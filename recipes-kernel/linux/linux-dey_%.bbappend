@@ -25,11 +25,6 @@ do_configure:append() {
     fi
 }
 
-# 追加 do_patch 任务以安装自定义 DTS 文件
-do_patch:append() {
-    bb.build.exec_func('install_dts', d)
-}
-
 DT_FILES = " \
     ccmp25-xtech.dts \
 "
@@ -52,6 +47,8 @@ python install_dts() {
         subprocess.run(['install', '-D', '-m', '644', src, dest], check=True)
 
 }
+
+addtask install_dts after do_patch before do_configure
 
 # 为 ccmp25-dvk机器添加设备树和 overlay
 STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
