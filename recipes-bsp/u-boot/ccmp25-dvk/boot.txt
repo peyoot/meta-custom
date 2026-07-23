@@ -67,12 +67,10 @@ setexpr module_has_bt ${module_has_bt} / 20000
 
 if test "${module_has_bt}" = "1" && test -z "${disable_bt}"; then
 #	setenv overlays ccmp25_bt.dtbo,${overlays}
-	setenv disable_bt 1
 fi
 
 if test "${module_has_wifi}" = "1" && test -z "${disable_wifi}"; then
 #	setenv overlays ccmp25_wifi.dtbo,${overlays}
-	setenv disable_wifi 1
 fi
 
 dboot linux mmc ${mmcbootdev}:${mmcpart}

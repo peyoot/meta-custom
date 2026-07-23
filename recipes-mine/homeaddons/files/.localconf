@@ -1,25 +1,36 @@
 
-DISTRO_FEATURES:append = " rt opengl pam "
-DISTRO_FEATURES:remove = " wayland x11 cellular 3g "
-DISTRO_FEATURES:remove = " bluetooth wifi "
+MACHINE_FEATURES:remove = " wifi bluetooth "
+MACHINE_EXTRA_RDEPENDS:remove = " xbee-init "
+
+DISTRO_FEATURES:append = " rt opengl "
+DISTRO_FEATURES:remove = " x11 cellular "
+
+DISTRO_FEATURES:remove = " wayland "
+DISTRO_FEATURES:remove = " pulseaudio gstreamer "
+
+CCCS_PKGS = ""
+VIRTUAL-RUNTIME_ftp-server = ""
+VIRTUAL-RUNTIME_http-server = ""
 
 IMAGE_INSTALL:append = " \
     qtbase \
     qtbase-plugins \
     qtdeclarative \
-    qtquickcontrols2 \
-    qtquickcontrols2-qmlplugins \
+    qtquickcontrols \
+    qtquickcontrols-qmlplugins \
     qtgraphicaleffects \
     qtgraphicaleffects-qmlplugins \
     qtsvg \
     qtserialport \
     qtwebsockets \
-    qt5everywheredemo \
-    libdrm \
+    qtvirtualkeyboard \
+    qtvirtualkeyboard-qmlplugins \
+    sqlite3 \
+    libdrm libdrm-tests \
     libegl \
     libgles2 \
     tslib tslib-calibrate tslib-tests \
-    homeaddons touch-calibration dualdisplay-bl-ctl \
+    homeaddons touch-calibration \
     iproute2 i2c-tools \
     mesa \
     evtest \
@@ -27,47 +38,41 @@ IMAGE_INSTALL:append = " \
     dey-examples-rtc \
 "
 
-# 设置默认的Qt平台（针对STM32MP25优化）
-QT_QPA_DEFAULT_PLATFORM = "eglfs"
-QT_QPA_EGLFS_INTEGRATION = "eglfs_kms"
+IMAGE_INSTALL:append = " \
+    util-linux-taskset \
+    util-linux-chrt \
+    util-linux-lscpu \
+    procps \
+"
 
-#QT_QPA_EGLFS_KMS_CONFIG = "/etc/qt5/eglfs_kms_config.json"
-
-GLIBC_GENERATE_LOCALES = "zh_CN.UTF-8 en_GB.UTF-8 en_US.UTF-8"
-IMAGE_LINGUAS = "zh-cn"
 
 # 添加DRM/KMS和硬件加速所必须的配置
-PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs gles2 fontconfig jpeg gif "
-PACKAGECONFIG:remove:pn-qtbase = " glib x11 xcb linuxfb wayland "
+PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs gles2 fontconfig jpeg png gif "
 
-PACKAGECONFIG:remove:pn-networkmanager = " modemmanager"
-PACKAGECONFIG:remove:pn-networkmanager = " ppp"
-
-PACKAGECONFIG:remove:pn-gstreamer1.0-plugins-bad = " vulkan "
-
-RDEPENDS:packagegroup-dey-core:remove = " connectcore-demo-example xbee-init"
-RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager gstreamer bluetooth wifi "
-RDEPENDS:networkmanager:remove = " ppp modemmanager "
+# 移除不再需要的配置，特别是明确禁用linuxfb和egl
+PACKAGECONFIG:remove:pn-qtbase = " glib x11 xcb linuxfb "
 
 
 # 禁用 swupdate 服务的自动启动（同时会禁用其 socket，因为它们属于同一配方）
 SYSTEMD_AUTO_ENABLE:pn-swupdate = "disable"
 
-
-IMAGE_INSTALL:remove = " wayland wayland-protocols libxkbcommon libinput libevdev \
-                         mtdev lighttpd avahi-daemon hostapd \
+IMAGE_INSTALL:remove = " mtdev vsftpd lighttpd avahi-daemon hostapd \
                          pulseaudio \
-                         tools-debug ppp modemmanager \
-                         swupdate swupdate-www ssh-server-openssh \
                        "
+
+IMAGE_INSTALL:remove = " wayland wayland-protocols "
+
+#IMAGE_INSTALL:remove = " libxkbcommon libinput libevdev \
+#                         swupdate swupdate-www \
+#                       "
 
 SKIP_RECIPE[modemmanager] = "Not needed, no cellular module"
 SKIP_RECIPE[ppp] = "Not needed, no cellular module"
 SKIP_RECIPE[xbee] = "Not needed, no xbee module"
+#SKIP_RECIPE[swupdate] = "Diagnosing dependency"
 
-#生产环境以下可保留，如需调试用的固件，可删除下面包，以恢复调试功能
 # 移除调试特性
-IMAGE_FEATURES:remove = "eclipse-debug dbg-pkgs tools-debug tools-profile tools-testapps dev-pkgs package-management"
+IMAGE_FEATURES:remove = " eclipse-debug dbg-pkgs tools-debug tools-profile tools-testapps dev-pkgs package-management"
 
 # 全局抑制调试符号
 INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
