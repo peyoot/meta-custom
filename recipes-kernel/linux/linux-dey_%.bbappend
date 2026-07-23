@@ -33,6 +33,7 @@ do_compile:prepend() {
 
 DT_FILES = " \
     ccmp25-viena.dts \
+    ccmp25-viena-rt.dts \
     ccmp25-viena-hdmi.dts \
     ccmp25-viena-dualdisplay.dts \
     ccmp25-viena_ads7846.dtso \
@@ -64,6 +65,7 @@ addtask install_dts after do_patch before do_configure
 # 为 ccmp25-dvk机器添加设备树和 overlay
 STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
     ccmp25-viena.dtb \
+    ccmp25-viena-rt.dtb \
     ccmp25-viena-hdmi.dtb \
     ccmp25-viena-dualdisplay.dtb \
     ccmp25-viena_ads7846.dtbo \
