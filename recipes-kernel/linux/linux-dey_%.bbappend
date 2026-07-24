@@ -48,7 +48,8 @@ python install_dts() {
 
 }
 
-addtask install_dts after do_patch before do_configure
+# addtask install_dts after do_patch before do_configure
+do_configure[prefuncs] += "install_dts"
 
 # 为 ccmp25-dvk机器添加设备树和 overlay
 STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
