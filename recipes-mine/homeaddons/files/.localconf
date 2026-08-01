@@ -19,7 +19,7 @@ IMAGE_INSTALL:append = " \
     libegl \
     libgles2 \
     tslib tslib-calibrate tslib-tests \
-    homeaddons touch-calibration \
+    homeaddons \
     iproute2 i2c-tools \
     mesa \
     evtest \
@@ -31,6 +31,22 @@ IMAGE_INSTALL:append = " \
     ros-core \
     packagegroup-ros2-demos \
 "
+                                                                                                                                                      
+IMAGE_INSTALL:append = " \                                                                                                                            
+    moveit-core \                                                                                                                                     
+    moveit-ros-planning \                                                                                                                             
+    moveit-ros-planning-interface \                                                                                                                   
+    moveit-ros-move-group \                                                                                                                           
+    moveit-ros-occupancy-map-monitor \                                                                                                                
+    moveit-kinematics \                                                                                                                               
+    moveit-planners-ompl \                                                                                                                            
+    moveit-simple-controller-manager \                                                                                                                
+    moveit-ros-control-interface \                                                                                                                    
+    moveit-servo \                                                                                                                                    
+    moveit-configs-utils \                                                                                                                            
+ "                                                                                                                                                    
+                                                                                                                                                      
+IMAGE_INSTALL:append = " igh-ethercat "
 
 # 设置默认的Qt平台（针对STM32MP25优化）
 QT_QPA_DEFAULT_PLATFORM = "eglfs"
@@ -79,3 +95,9 @@ IMAGE_FEATURES:remove = " eclipse-debug dbg-pkgs tools-debug tools-profile tools
 
 # 全局抑制调试符号
 INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
+
+# Restrict para threads to reduce memory occupation
+BB_NUMBER_THREADS = "2"
+PARALLEL_MAKE = "-j 2"
+
+SPDXLICENSEMAP[BSD] = "BSD-3-Clause"
