@@ -1,0 +1,16 @@
+[Unit]
+Description=EtherCAT Master Kernel Modules
+# The generic (ec_generic) driver rides on top of the normal kernel network
+# stack, so bring the master up after the network interface exists.
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# ethercatctl reads /etc/ethercat.conf (MASTER0_DEVICE=<MAC>, DEVICE_MODULES="generic")
+# and loads ec_master + the selected device module in the correct order.
+ExecStart=/usr/sbin/ethercatctl start
+ExecStop=/usr/sbin/ethercatctl stop
+
+[Install]
+WantedBy=multi-user.target
