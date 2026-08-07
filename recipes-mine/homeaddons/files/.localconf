@@ -1,20 +1,30 @@
+# MACHINE_FEATURES:remove = " wifi bluetooth "
+MACHINE_EXTRA_RDEPENDS:remove = " xbee-init "
 
-DISTRO_FEATURES:append = " rt opengl pam "
-DISTRO_FEATURES:remove = " x11 cellular 3g "
-# DISTRO_FEATURES:remove = " bluetooth wifi "
+DISTRO_FEATURES:append = " rt opengl "
+DISTRO_FEATURES:remove = " x11 cellular "
+
+DISTRO_FEATURES:remove = " wayland "
+DISTRO_FEATURES:remove = " pulseaudio "
+
+CCCS_PKGS = ""
+VIRTUAL-RUNTIME_ftp-server = ""
+VIRTUAL-RUNTIME_http-server = ""
 
 IMAGE_INSTALL:append = " \
     qtbase \
     qtbase-plugins \
     qtdeclarative \
-    qtquickcontrols2 \
-    qtquickcontrols2-qmlplugins \
+    qtquickcontrols \
+    qtquickcontrols-qmlplugins \
     qtgraphicaleffects \
     qtgraphicaleffects-qmlplugins \
     qtsvg \
     qtserialport \
     qtwebsockets \
-    qt5everywheredemo \
+    qtvirtualkeyboard \
+    qtvirtualkeyboard-qmlplugins \
+    sqlite3 \
     libdrm libdrm-tests \
     libegl \
     libgles2 \
@@ -27,50 +37,45 @@ IMAGE_INSTALL:append = " \
     dey-examples-rtc \
 "
 
-#IMAGE_INSTALL:append = " \
-#    dualdisplay-bl-ctl \
-#"
+IMAGE_INSTALL:append = " \
+    util-linux-taskset \
+    util-linux-chrt \
+    util-linux-lscpu \
+    procps \
+"
 
-# 设置默认的Qt平台（针对STM32MP25优化）
-QT_QPA_DEFAULT_PLATFORM = "eglfs"
-QT_QPA_EGLFS_INTEGRATION = "eglfs_kms"
-
-#QT_QPA_EGLFS_KMS_CONFIG = "/etc/qt5/eglfs_kms_config.json"
-
-GLIBC_GENERATE_LOCALES = "zh_CN.UTF-8 en_GB.UTF-8 en_US.UTF-8"
-IMAGE_LINGUAS = "zh-cn"
 
 # 添加DRM/KMS和硬件加速所必须的配置
-PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs gles2 fontconfig jpeg gif "
-
-PACKAGECONFIG:remove:pn-networkmanager = " modemmanager"
-PACKAGECONFIG:remove:pn-networkmanager = " ppp"
+PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs gles2 fontconfig jpeg png gif "
+PACKAGECONFIG:remove:pn-qtvirtualkeyboard = " lang-all lipi-toolkit"
+PACKAGECONFIG:append:pn-qtvirtualkeyboard = " lang-en_US"
 # 移除不再需要的配置，特别是明确禁用linuxfb和egl
 PACKAGECONFIG:remove:pn-qtbase = " glib x11 xcb linuxfb "
-PACKAGECONFIG:remove:pn-gstreamer1.0-plugins-bad = " vulkan "
 
-RDEPENDS:packagegroup-dey-core:remove = " connectcore-demo-example xbee-init"
-RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager gstreamer "
-RDEPENDS:networkmanager:remove = " ppp modemmanager "
+# 从networkmanager中移除4G模块支持
+PACKAGECONFIG:remove:pn-networkmanager = "modemmanager ppp"
+RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager "
+
+#
+PACKAGECONFIG:remove:pn-gstreamer1.0-plugins-bad = " vulkan"
+RDEPENDS:packagegroup-dey-gstreamer:remove = " gstreamer1.0-plugins-good-pulseaudio "
+
+RDEPENDS:packagegroup-dey-core:remove = " connectcore-demo-example xbee-init "
 RDEPENDS:packagegroup-machine-base:remove = " xbee-init"
+
 
 # 禁用 swupdate 服务的自动启动（同时会禁用其 socket，因为它们属于同一配方）
 SYSTEMD_AUTO_ENABLE:pn-swupdate = "disable"
 
 IMAGE_INSTALL:remove = " mtdev vsftpd lighttpd avahi-daemon hostapd \
                          pulseaudio \
-                         ppp modemmanager \
                        "
 
-#IMAGE_INSTALL:remove = " wayland wayland-protocols libxkbcommon libinput libevdev \
-#                         swupdate swupdate-www \
-#                         ssh-server-openssh \
-#                       "
+IMAGE_INSTALL:remove = " wayland wayland-protocols "
 
 SKIP_RECIPE[modemmanager] = "Not needed, no cellular module"
 SKIP_RECIPE[ppp] = "Not needed, no cellular module"
 SKIP_RECIPE[xbee] = "Not needed, no xbee module"
-
 #SKIP_RECIPE[swupdate] = "Diagnosing dependency"
 
 # 移除调试特性
