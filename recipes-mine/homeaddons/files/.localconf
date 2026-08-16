@@ -33,6 +33,7 @@ IMAGE_INSTALL:append = " \
     libgles2 \
     tslib tslib-calibrate tslib-tests \
     homeaddons touch-calibration \
+    gpio-demo-ctrl \
     iproute2 i2c-tools \
     evtest \
     ttf-dejavu-sans \
