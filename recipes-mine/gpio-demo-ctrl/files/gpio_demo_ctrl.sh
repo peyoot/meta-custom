@@ -1,5 +1,5 @@
 #!/bin/bash
-# gpio_ctrl.sh - 只监听上升沿，兼容旧版 gpiomon
+# gpio_demo_ctrl.sh - 只监听上升沿，兼容旧版 gpiomon
 
 PORT="${1:-GPIOF}"
 LINE="${2:-12}"
