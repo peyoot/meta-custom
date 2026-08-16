@@ -1,0 +1,14 @@
+# /etc/systemd/system/gpio_guard.service
+[Unit]
+Description=GPIO Guard for QtDemo (User button 2)
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStartPre=/bin/systemctl stop cccs-gs-demo
+ExecStart=/bin/bash /opt/gpio_ctrl.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

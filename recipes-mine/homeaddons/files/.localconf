@@ -1,11 +1,13 @@
-MACHINE_FEATURES:remove = " wifi bluetooth "
-MACHINE_EXTRA_RDEPENDS:remove = " xbee-init "
 
 DISTRO_FEATURES:append = " rt opengl "
-DISTRO_FEATURES:remove = " x11 cellular "
 
-DISTRO_FEATURES:remove = " wayland "
-DISTRO_FEATURES:remove = " pulseaudio "
+MACHINE_FEATURES:remove = " wifi bluetooth alsa"
+MACHINE_EXTRA_RDEPENDS:remove = " xbee-init "
+
+DISTRO_FEATURES:remove = " x11 wayland cellular alsa vulkan "
+DISTRO_FEATURES:remove = " cellular wifi bluetooth "
+
+DISTRO_FEATURES:remove = " pulseaudio gstreamer "
 
 CCCS_PKGS = ""
 VIRTUAL-RUNTIME_ftp-server = ""
@@ -24,6 +26,7 @@ IMAGE_INSTALL:append = " \
     qtwebsockets \
     qtvirtualkeyboard \
     qtvirtualkeyboard-qmlplugins \
+    qt5everywheredemo \
     sqlite3 \
     libdrm libdrm-tests \
     libegl \
@@ -31,7 +34,6 @@ IMAGE_INSTALL:append = " \
     tslib tslib-calibrate tslib-tests \
     homeaddons touch-calibration \
     iproute2 i2c-tools \
-    mesa \
     evtest \
     ttf-dejavu-sans \
     dey-examples-rtc \
@@ -44,9 +46,8 @@ IMAGE_INSTALL:append = " \
     procps \
 "
 
-
 # 添加DRM/KMS和硬件加速所必须的配置
-PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs gles2 fontconfig jpeg png gif "
+PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs gles2 fontconfig jpeg gif "
 PACKAGECONFIG:remove:pn-qtvirtualkeyboard = " lang-all lipi-toolkit"
 PACKAGECONFIG:append:pn-qtvirtualkeyboard = " lang-en_US"
 # 移除不再需要的配置，特别是明确禁用linuxfb和egl
@@ -72,6 +73,11 @@ IMAGE_INSTALL:remove = " mtdev vsftpd lighttpd avahi-daemon hostapd \
                        "
 
 IMAGE_INSTALL:remove = " wayland wayland-protocols "
+
+
+#IMAGE_INSTALL:remove = " libxkbcommon libinput libevdev \
+#                         swupdate swupdate-www \
+#                       "
 
 SKIP_RECIPE[modemmanager] = "Not needed, no cellular module"
 SKIP_RECIPE[ppp] = "Not needed, no cellular module"
