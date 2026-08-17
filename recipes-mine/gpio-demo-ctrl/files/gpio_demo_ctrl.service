@@ -6,7 +6,7 @@ After=multi-user.target
 [Service]
 Type=simple
 ExecStartPre=/bin/systemctl stop cccs-gs-demo
-ExecStart=/bin/bash /opt/gpio_demo_ctrl.sh
+ExecStart=/bin/sh /usr/bin/gpio_demo_ctrl.sh
 Restart=always
 RestartSec=5
 
