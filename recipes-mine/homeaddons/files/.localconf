@@ -1,4 +1,3 @@
-
 DISTRO_FEATURES:append = " rt opengl "
 
 DISTRO_FEATURES:remove = " x11 "
@@ -8,18 +7,17 @@ IMAGE_INSTALL:append = " \
     qtbase \
     qtbase-plugins \
     qtdeclarative \
-    qtquickcontrols \
-    qtquickcontrols-qmlplugins \
-    qtgraphicaleffects \
-    qtgraphicaleffects-qmlplugins \
+    qtdeclarative-qmlplugins \
     qtsvg \
     qtserialport \
     qtwebsockets \
     qtvirtualkeyboard \
     qtvirtualkeyboard-qmlplugins \
-    qt5everywheredemo \
+    qtbase-examples \
+    qtdeclarative-examples \
     sqlite3 \
     libdrm libdrm-tests \
+    libgbm \
     libegl \
     libgles2 \
     homeaddons \
@@ -37,10 +35,12 @@ IMAGE_INSTALL:append = " \
     procps \
 "
 
-IMAGE_INSTALL:append = " packagegroup-dey-webkit"
+IMAGE_INSTALL:append = " hmi-dashboard vitalmonitor bedside-monitor "
+
+IMAGE_INSTALL:append = " packagegroup-dey-webkit weston weston-init "
 
 # 添加DRM/KMS和硬件加速所必须的配置
-PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs gles2 fontconfig jpeg gif "
+PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs gles2 fontconfig jpeg "
 PACKAGECONFIG:remove:pn-qtvirtualkeyboard = " lang-all lipi-toolkit"
 PACKAGECONFIG:append:pn-qtvirtualkeyboard = " lang-en_US"
 # 移除不再需要的配置，特别是明确禁用linuxfb和egl
