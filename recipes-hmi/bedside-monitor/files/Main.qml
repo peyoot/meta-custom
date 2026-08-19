@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Window
+import QtQuick.Layouts          // 新增，支持 Layout 属性
 
 Window {
     id: window
@@ -18,49 +19,54 @@ Window {
         border.color: "#152033"
         border.width: 1
 
-        Row {
+        // 将 Row 改为 RowLayout，使其支持 Layout.fillWidth
+        RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 24
             anchors.rightMargin: 24
             spacing: 20
+
             Text {
                 text: "VITASCOPE BEDSIDE MONITOR"
                 color: "#60a5fa"
                 font.bold: true
                 font.pixelSize: 22
-                anchors.verticalCenter: parent.verticalCenter
+                Layout.alignment: Qt.AlignVCenter   // 垂直居中
             }
             Text {
                 text: "Patient: #PT-28471"
                 color: "#94a3b8"
                 font.pixelSize: 16
-                anchors.verticalCenter: parent.verticalCenter
+                Layout.alignment: Qt.AlignVCenter
             }
-            Item { Layout.fillWidth: true }
+            Item { Layout.fillWidth: true }         // 现在有效，占据剩余空间
             Text {
                 text: "● MONITORING"
                 color: "#34d399"
                 font.pixelSize: 16
-                anchors.verticalCenter: parent.verticalCenter
+                Layout.alignment: Qt.AlignVCenter
             }
             Text {
                 id: clockText
                 color: "#e2e8f0"
                 font.pixelSize: 20
-                anchors.verticalCenter: parent.verticalCenter
+                Layout.alignment: Qt.AlignVCenter
             }
-            Timer {
-                interval: 1000
-                running: true
-                repeat: true
-                onTriggered: {
-                    clockText.text = Qt.formatTime(new Date(), "hh:mm:ss")
-                }
-            }
+            // Timer 已移出布局，放在下方
         }
     }
 
-    // 主体行：左数值 + 右波形
+    // 时钟 Timer（从布局中移出，作为 Window 的直接子项）
+    Timer {
+        interval: 1000
+        running: true
+        repeat: true
+        onTriggered: {
+            clockText.text = Qt.formatTime(new Date(), "hh:mm:ss")
+        }
+    }
+
+    // 主体行：左数值 + 右波形（保持不变）
     Row {
         anchors.top: topBar.bottom
         anchors.topMargin: 12
@@ -75,13 +81,13 @@ Window {
         // 左侧：数值面板
         VitalsPanel {
             id: vitals
-            width: 380   // 适当缩小以适应 1280 宽度
+            width: 380
             height: parent.height
         }
 
         // 右侧：波形区
         Column {
-            width: parent.width - 392   // 380 + 12 margin
+            width: parent.width - 392
             height: parent.height
             spacing: 12
 
