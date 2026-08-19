@@ -40,6 +40,8 @@ IMAGE_INSTALL:append = " hmi-dashboard vitalmonitor bedside-monitor "
 
 IMAGE_INSTALL:append = " packagegroup-dey-webkit weston weston-init "
 
+IMAGE_INSTALL:append:ccmp25 = " packagegroup-dey-x-linux-ai "
+
 # 添加DRM/KMS和硬件加速所必须的配置
 PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs gles2 fontconfig jpeg "
 PACKAGECONFIG:remove:pn-qtvirtualkeyboard = " lang-all lipi-toolkit"
