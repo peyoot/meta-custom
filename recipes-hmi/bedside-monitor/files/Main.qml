@@ -14,7 +14,7 @@ Window {
     Rectangle {
         id: topBar
         width: parent.width
-        height: 60
+        height: 80
         color: "#0a0f1a"
         border.color: "#152033"
         border.width: 1
@@ -46,6 +46,33 @@ Window {
                 font.pixelSize: 16
                 Layout.alignment: Qt.AlignVCenter
             }
+            Text {
+                text: "❤"
+                color: "#ef4444"          // 红色
+                font.pixelSize: 28
+                Layout.alignment: Qt.AlignVCenter
+                // 心跳动画
+                NumberAnimation on scale {
+                    id: heartBeatAnim
+                    from: 1.0
+                    to: 1.3
+                    duration: 600          // 基础周期，会根据心率动态调整
+                    running: true
+                    loops: Animation.Infinite
+                    easing.type: Easing.InOutQuad
+                }
+                // 心率变化时调整动画速度
+                Connections {
+                    target: vitals
+                    function onHrChanged() {
+                        var hr = vitals.hr
+                        if (hr > 0) {
+                            // 每分钟心跳数转换为毫秒周期：60000 / hr，再除以2（一次缩放为半个周期）
+                            heartBeatAnim.duration = 60000 / hr / 2
+                        }
+                    }
+                }
+            }           
             Text {
                 id: clockText
                 color: "#e2e8f0"

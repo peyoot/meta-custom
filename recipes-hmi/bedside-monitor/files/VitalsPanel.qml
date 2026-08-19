@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls 
 
 Rectangle {
     id: root
@@ -9,6 +9,10 @@ Rectangle {
     property int nibpSys: 120
     property int nibpDia: 80
     property real temp: 36.8
+
+    onHrChanged: {}
+    // 其他属性同理，但如果你只关心 hr，可以省略
+    // onSpo2Changed: {}
 
     color: "#0a0f1a"
     radius: 10
