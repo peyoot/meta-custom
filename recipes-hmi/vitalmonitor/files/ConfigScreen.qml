@@ -199,8 +199,7 @@ Item {
                             GradientStop { position: 1.0; color: startBtn.pressed ? "#0d9488" : "#14b8a6" }
                         }
                         border.color: "#5eead4"
-                        border.width: pulse.on ? 2 : 1
-                        QtObject { id: pulse; property bool on: false }
+                        border.width: 1
                         SequentialAnimation on opacity {
                             loops: Animation.Infinite
                             NumberAnimation { to: 0.82; duration: 900; easing.type: Easing.InOutSine }

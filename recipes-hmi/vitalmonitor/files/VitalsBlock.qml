@@ -15,6 +15,8 @@ Rectangle {
     border.color: "#1e293b"
     border.width: 1
 
+    Behavior on value { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+
     // 顶部标签行
     Row {
         id: header
@@ -60,7 +62,6 @@ Rectangle {
         anchors.verticalCenterOffset: 8
         anchors.left: parent.left
         anchors.leftMargin: 16
-        Behavior on value { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
     }
 
     Text {
