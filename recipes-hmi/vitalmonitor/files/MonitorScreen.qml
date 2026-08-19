@@ -115,17 +115,17 @@ Item {
             WavePanel {
                 Layout.fillWidth: true; Layout.fillHeight: true
                 title: "ECG II"; titleColor: "#34d399"
-                waveType: "ecg"; rate: page.hr; traceColor: "#34d399"; gain: 0.42; baseline: 0.5
+                waveType: "ecg"; rate: page.hr; traceColor: "#34d399"; gain: 0.42; baselineFrac: 0.5
             }
             WavePanel {
                 Layout.fillWidth: true; Layout.fillHeight: true
                 title: "PLETH · SpO₂"; titleColor: "#38bdf8"
-                waveType: "pleth"; rate: page.hr; traceColor: "#38bdf8"; gain: 0.55; baseline: 0.68
+                waveType: "pleth"; rate: page.hr; traceColor: "#38bdf8"; gain: 0.55; baselineFrac: 0.68
             }
             WavePanel {
                 Layout.fillWidth: true; Layout.fillHeight: true
                 title: "RESP"; titleColor: "#fbbf24"
-                waveType: "resp"; rate: page.resp; traceColor: "#fbbf24"; gain: 0.32; baseline: 0.5
+                waveType: "resp"; rate: page.resp; traceColor: "#fbbf24"; gain: 0.32; baselineFrac: 0.5
                 sweepSpeed: 2
             }
         }
@@ -191,7 +191,7 @@ Item {
         property alias  rate: wave.rate
         property alias  traceColor: wave.traceColor
         property alias  gain: wave.gain
-        property alias  baseline: wave.baseline
+        property alias  baselineFrac: wave.baselineFrac
         property alias  sweepSpeed: wave.sweepSpeed
 
         color: "#080f1c"; radius: 10

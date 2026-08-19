@@ -12,7 +12,7 @@ Item {
     property real  rate:       72        // 本波形的节律（次/分）
     property string waveType:  "ecg"     // ecg | pleth | resp
     property real  gain:       0.42      // 幅度占高度的比例
-    property real  baseline:   0.5       // 基线位置（高度比例，0=顶 1=底）
+    property real  baselineFrac: 0.5         // 基线位置（高度比例，0=顶 1=底）
     property int   sweepSpeed: 3         // 每帧前进像素
     property int   tickMs:     24        // 帧间隔
     property bool  running:    true
@@ -37,7 +37,7 @@ Item {
             // 基线
             ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.05)
             ctx.beginPath()
-            ctx.moveTo(0, height * baseline); ctx.lineTo(width, height * baseline); ctx.stroke()
+            ctx.moveTo(0, height * baselineFrac); ctx.lineTo(width, height * baselineFrac); ctx.stroke()
         }
         onWidthChanged:  requestPaint()
         onHeightChanged: requestPaint()
@@ -51,7 +51,7 @@ Item {
         property real headX: 0
         property real phase: 0
         property real prevX: 0
-        property real prevY: height * baseline
+        property real prevY: height * baselineFrac
 
         function sample(ph) {
             if (waveType === "ecg")   return HD.ecgAmplitude(ph)
@@ -63,7 +63,7 @@ Item {
         function resetTrace() {
             var ctx = getContext("2d")
             if (ctx) ctx.reset()
-            headX = 0; phase = 0; prevX = 0; prevY = height * baseline
+            headX = 0; phase = 0; prevX = 0; prevY = height * baselineFrac
         }
         onWidthChanged:  resetTrace()
         onHeightChanged: resetTrace()
@@ -91,13 +91,13 @@ Item {
                 if (headX >= w) {                        // 回卷到左缘
                     ctx.stroke()
                     headX = 0
-                    var y0 = h * baseline - sample(phase) * gain * h
+                    var y0 = h * baselineFrac - sample(phase) * gain * h
                     ctx.beginPath(); ctx.moveTo(0, y0)
                     prevX = 0; prevY = y0
                     continue
                 }
 
-                var y = h * baseline - sample(phase) * gain * h
+                var y = h * baselineFrac - sample(phase) * gain * h
                 ctx.lineTo(headX, y)
                 prevX = headX; prevY = y
             }
