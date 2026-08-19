@@ -6,8 +6,9 @@ ApplicationWindow {
     id: app
     visible: true
     visibility: Window.FullScreen
-    width: 1024
-    height: 600
+    // 不写死像素尺寸，直接跟随实际屏幕分辨率，避免与 FullScreen 冲突
+    width: Screen.width
+    height: Screen.height
     color: "#05070d"
     title: "Vital Monitor (Qt6)"
 
