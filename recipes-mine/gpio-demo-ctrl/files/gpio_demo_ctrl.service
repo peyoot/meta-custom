@@ -1,14 +1,19 @@
 # /etc/systemd/system/gpio_demo_ctrl.service
 [Unit]
-Description=GPIO Guard for Demo Application (User button 2)
-After=multi-user.target
+Description=GPIO Guard for Demo Applications (User button 2)
+After=graphical.target multi-user.target
+Requires=graphical.target
 
 [Service]
 Type=simple
-ExecStartPre=/bin/systemctl stop cccs-gs-demo
 ExecStart=/bin/sh /usr/bin/gpio_demo_ctrl.sh
 Restart=always
 RestartSec=5
+Environment=WAYLAND_DISPLAY=wayland-1
+Environment=XDG_RUNTIME_DIR=/run/user/0
+Environment=XDG_RUNTIME_DIR=/run/user/0
+Environment=QT_QPA_PLATFORM=wayland
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:/sbin
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=graphical.target
