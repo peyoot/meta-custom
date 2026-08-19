@@ -3,11 +3,14 @@ import QtQuick.Controls
 import QtQuick.Window
 
 Window {
-    width: 1280
-    height: 800
+    id: window
     visible: true
+    visibility: Window.FullScreen
     color: "#0a0e17"
     title: "Vital Monitor (Qt6)"
+
+    // 全局趋势数据数组
+    property var trendData: []
 
     // ============ 顶部状态栏 ============
     Rectangle {
@@ -105,16 +108,15 @@ Window {
                 property int t: 0
                 onTriggered: {
                     t += 1
-                    // 生成 PQRST 波形
                     var v = 0
-                    var phase = (t % 100) / 100.0  // 一个心动周期
-                    if (phase < 0.1) v = Math.sin(phase * 10 * Math.PI) * 0.1          // P 波
+                    var phase = (t % 100) / 100.0
+                    if (phase < 0.1) v = Math.sin(phase * 10 * Math.PI) * 0.1
                     else if (phase >= 0.15 && phase < 0.25) {
-                        if (phase < 0.17) v = -0.2                                   // Q
-                        else if (phase < 0.19) v = 1.0                                // R 峰值
-                        else if (phase < 0.21) v = -0.3                               // S
+                        if (phase < 0.17) v = -0.2
+                        else if (phase < 0.19) v = 1.0
+                        else if (phase < 0.21) v = -0.3
                     }
-                    else if (phase >= 0.35 && phase < 0.5) v = Math.sin((phase-0.35) * 6 * Math.PI) * 0.15  // T 波
+                    else if (phase >= 0.35 && phase < 0.5) v = Math.sin((phase-0.35) * 6 * Math.PI) * 0.15
                     else v = 0
 
                     ecgCanvas.points.push(v)
@@ -187,36 +189,35 @@ Window {
             }
 
             Canvas {
+                id: trendCanvas
                 anchors.fill: parent
                 anchors.topMargin: 30
                 onPaint: {
                     var ctx = getContext("2d")
                     ctx.clearRect(0, 0, width, height)
-                    var n = trendData.length
+                    var n = window.trendData.length
                     if (n < 2) return
                     ctx.strokeStyle = "#f87171"
                     ctx.lineWidth = 2
                     ctx.beginPath()
                     for (var i = 0; i < n; i++) {
                         var px = (i / (n - 1)) * width
-                        var py = height - (trendData[i] / 200) * height
+                        var py = height - (window.trendData[i] / 200) * height
                         if (i === 0) ctx.moveTo(px, py)
                         else ctx.lineTo(px, py)
                     }
                     ctx.stroke()
                 }
+            }
 
-                property var trendData: []
-
-                Timer {
-                    interval: 1000
-                    running: true
-                    repeat: true
-                    onTriggered: {
-                        trendData.push(hrValue)
-                        if (trendData.length > 60) trendData.shift()
-                        parent.requestPaint()
-                    }
+            Timer {
+                interval: 1000
+                running: true
+                repeat: true
+                onTriggered: {
+                    window.trendData.push(window.hrValue)
+                    if (window.trendData.length > 60) window.trendData.shift()
+                    trendCanvas.requestPaint()
                 }
             }
         }
@@ -275,7 +276,6 @@ Window {
             anchors.margins: 12
         }
 
-        // 数值变化时的脉冲动画
         Behavior on value {
             NumberAnimation { duration: 500; easing.type: Easing.OutCubic }
         }

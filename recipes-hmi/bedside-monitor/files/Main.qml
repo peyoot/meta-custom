@@ -3,9 +3,9 @@ import QtQuick.Controls
 import QtQuick.Window
 
 Window {
-    width: 1920
-    height: 1080
+    id: window
     visible: true
+    visibility: Window.FullScreen
     color: "#05070d"
     title: "Bedside Monitor (Qt6)"
 
@@ -36,14 +36,13 @@ Window {
                 font.pixelSize: 16
                 anchors.verticalCenter: parent.verticalCenter
             }
-            Item { width: 40; height: 1 }
+            Item { Layout.fillWidth: true }
             Text {
                 text: "● MONITORING"
                 color: "#34d399"
                 font.pixelSize: 16
                 anchors.verticalCenter: parent.verticalCenter
             }
-            Item { width: parent.width - 700; height: 1 }
             Text {
                 id: clockText
                 color: "#e2e8f0"
@@ -76,13 +75,13 @@ Window {
         // 左侧：数值面板
         VitalsPanel {
             id: vitals
-            width: 420
+            width: 380   // 适当缩小以适应 1280 宽度
             height: parent.height
         }
 
         // 右侧：波形区
         Column {
-            width: parent.width - 432
+            width: parent.width - 392   // 380 + 12 margin
             height: parent.height
             spacing: 12
 
