@@ -1,7 +1,7 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Window
-import QtQuick.Layouts          // 新增，支持 Layout 属性
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Window 2.15
+import QtQuick.Layouts 2.15
 
 Window {
     id: window

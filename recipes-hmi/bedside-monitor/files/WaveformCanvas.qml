@@ -1,107 +1,115 @@
-import QtQuick
+import QtQuick 2.15
+import QtQuick.Controls 2.15
 
 Rectangle {
-    property string label
-    property string color
-    property string waveform  // "ecg" | "pleth" | "resp"
+    id: root
+    property string label: "ECG"
+    property string color: "#34d399"
+    property string waveform: "ecg"   // ecg, pleth, resp
+    property real sampleRate: 250     // 采样率（Hz）
+    property real speed: 25           // 滚动速度（像素/秒）
 
     color: "#0d1424"
     radius: 8
     border.color: "#1e293b"
     border.width: 1
 
+    // 数据缓冲区
+    property var buffer: []
+    property int maxPoints: 0
+    property real scrollOffset: 0
+
+    onWidthChanged: {
+        maxPoints = Math.floor(width * 2)  // 每像素2个点，保证平滑
+        if (buffer.length > maxPoints) {
+            buffer = buffer.slice(buffer.length - maxPoints)
+        }
+        canvas.requestPaint()
+    }
+
+    onHeightChanged: canvas.requestPaint()
+
+    // 标签
     Text {
         text: label
-        color: color
-        font.bold: true
-        font.pixelSize: 18
-        anchors.top: parent.top
+        color: "#64748b"
+        font.pixelSize: 14
         anchors.left: parent.left
-        anchors.margins: 12
+        anchors.top: parent.top
+        anchors.margins: 8
+        z: 1
     }
 
     Canvas {
         id: canvas
         anchors.fill: parent
-        anchors.topMargin: 44
-        anchors.leftMargin: 10
-        anchors.rightMargin: 10
-        anchors.bottomMargin: 10
-
-        property var points: []
-        property int maxPoints: 0
+        antialiasing: true
 
         onPaint: {
             var ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
 
-            // 网格
-            ctx.strokeStyle = "#131c2e"
-            ctx.lineWidth = 1
-            for (var gx = 0; gx < width; gx += 30) {
-                ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, height); ctx.stroke()
-            }
-            for (var gy = 0; gy < height; gy += 30) {
-                ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(width, gy); ctx.stroke()
-            }
+            if (buffer.length < 2) return
 
-            // 波形
-            if (points.length < 2) return
+            var midY = height / 2
+            var amp = height * 0.45   // 振幅为高度的45%
+            var stepX = width / (buffer.length - 1)
+
             ctx.strokeStyle = color
-            ctx.lineWidth = 2.5
+            ctx.lineWidth = 2
             ctx.beginPath()
-            for (var i = 0; i < points.length; i++) {
-                var px = (i / maxPoints) * width
-                var py = height / 2 - points[i] * (height / 2 - 15)
-                if (i === 0) ctx.moveTo(px, py)
-                else ctx.lineTo(px, py)
+
+            for (var i = 0; i < buffer.length; i++) {
+                var x = i * stepX
+                var y = midY - buffer[i] * amp
+                if (i === 0) ctx.moveTo(x, y)
+                else ctx.lineTo(x, y)
             }
             ctx.stroke()
-
-            // 扫描线效果
-            ctx.fillStyle = color
-            ctx.globalAlpha = 0.3
-            var scanX = (points.length / maxPoints) * width
-            ctx.fillRect(scanX - 2, 0, 4, height)
-            ctx.globalAlpha = 1.0
         }
+    }
 
-        Timer {
-            interval: 40
-            running: true
-            repeat: true
-            property int t: 0
-            onTriggered: {
-                t += 1
-                var phase = (t % 250) / 250.0
-                var v = 0
-                switch(waveform) {
-                case "ecg":
-                    if (phase < 0.1) v = Math.sin(phase * 10 * Math.PI) * 0.15;
-                    else if (phase >= 0.15 && phase < 0.25) {
-                        if (phase < 0.17) v = -0.25;
-                        else if (phase < 0.19) v = 1.0;
-                        else if (phase < 0.21) v = -0.35;
-                    }
-                    else if (phase >= 0.35 && phase < 0.5) v = Math.sin((phase-0.35) * 6 * Math.PI) * 0.2;
-                    break;
-                case "pleth":
-                    v = Math.exp(-Math.pow((phase - 0.2) * 4, 2)) + 0.3 * Math.exp(-Math.pow((phase - 0.5) * 6, 2));
-                    break;
-                case "resp":
-                    v = Math.sin(phase * 2 * Math.PI) * 0.7;
-                    break;
-                }
-                canvas.points.push(v)
-                if (canvas.points.length > canvas.maxPoints) {
-                    canvas.points.shift()
-                }
-                canvas.requestPaint()
+    // 模拟数据生成（真实应用中应从传感器读取）
+    Timer {
+        interval: 1000 / sampleRate
+        running: true
+        repeat: true
+        onTriggered: {
+            var val = generateSample(waveform)
+            buffer.push(val)
+            if (buffer.length > maxPoints) {
+                buffer.shift()
             }
+            canvas.requestPaint()
         }
+    }
 
-        Component.onCompleted: {
-            maxPoints = Math.floor(width / 4)
+    // 波形样本生成器（模拟三种波形）
+    function generateSample(type) {
+        var t = Date.now() / 1000
+        switch(type) {
+            case "ecg":
+                // 模拟 ECG 的 QRS 复合波
+                var phase = (t * 1.2) % 1.0
+                if (phase < 0.06) return -0.2 + 1.2 * Math.sin(phase / 0.06 * Math.PI)
+                else if (phase < 0.13) return -0.1 + 0.3 * Math.sin((phase - 0.07) / 0.04 * Math.PI)
+                else if (phase < 0.17) return -0.3 + 0.5 * Math.sin((phase - 0.135) / 0.035 * Math.PI)
+                else return 0.0 + 0.1 * Math.sin(phase * 20)
+            case "pleth":
+                return 0.5 + 0.4 * Math.sin(t * 2 * Math.PI * 1.2) + 0.1 * Math.sin(t * 2 * Math.PI * 2.4)
+            case "resp":
+                return 0.5 * Math.sin(t * 2 * Math.PI * 0.3) + 0.1 * Math.sin(t * 2 * Math.PI * 0.6)
+            default:
+                return Math.sin(t * 2 * Math.PI)
         }
+    }
+
+    Component.onCompleted: {
+        maxPoints = Math.floor(width * 2)
+        // 填充初始数据
+        for (var i = 0; i < maxPoints; i++) {
+            buffer.push(generateSample(waveform))
+        }
+        canvas.requestPaint()
     }
 }
