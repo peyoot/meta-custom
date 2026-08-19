@@ -24,7 +24,7 @@ APP2_START="/usr/bin/vitalmonitor &"
 APP2_STOP="pkill -x vitalmonitor"
 
 # 当前运行的应用索引（0,1,2），初始为 -1 表示无
-CURRENT_INDEX=-1
+CURRENT_INDEX=0
 
 # ===== 辅助函数 =====
 parse_timestamp() {
@@ -59,10 +59,32 @@ start_app() {
            eval "$APP0_START"
            ;;
         1) echo "[ACTION] Starting $APP1_NAME"
+           export WAYLAND_DISPLAY=wayland-1
+           export XDG_RUNTIME_DIR=/run/user/0
+           export QT_QPA_PLATFORM=wayland
+           export LANG=C.UTF-8
+           export LC_ALL=C.UTF-8
            eval "$APP1_START"
+           sleep 2
+           if $PGREP -x "bedside-monitor" >/dev/null 2>&1; then
+               echo "[OK] bedside-monitor started"
+           else
+               echo "[FAIL] bedside-monitor NOT running. Check /tmp/bedside.log"
+           fi
            ;;
         2) echo "[ACTION] Starting $APP2_NAME"
+           export WAYLAND_DISPLAY=wayland-1
+           export XDG_RUNTIME_DIR=/run/user/0
+           export QT_QPA_PLATFORM=wayland
+           export LANG=C.UTF-8
+           export LC_ALL=C.UTF-8
            eval "$APP2_START"
+           sleep 2
+           if $PGREP -x "vitalmonitor" >/dev/null 2>&1; then
+               echo "[OK] vitalmonitor started"
+           else
+               echo "[FAIL] vitalmonitor NOT running. Check /tmp/vital.log"
+           fi
            ;;
     esac
 }
@@ -83,14 +105,22 @@ stop_app() {
     esac
 }
 
+# 停止所有应用（无论哪个在运行）
+stop_all_apps() {
+    echo "[ACTION] Stopping all apps"
+    eval "$APP0_STOP"
+    eval "$APP1_STOP"
+    eval "$APP2_STOP"
+    # 等待所有进程退出
+    sleep 2
+    $PKILL -9 -x "bedside-monitor" 2>/dev/null
+    $PKILL -9 -x "vitalmonitor" 2>/dev/null
+    # webkit 例程可能也有残留进程，但由其控制脚本处理
+}
 # 切换到下一个应用
 switch_to_next() {
-    # 先停止当前运行的应用（如果有）
-    if [ $CURRENT_INDEX -ge 0 ]; then
-        stop_app $CURRENT_INDEX
-        # 等待停止完成
-        sleep 1
-    fi
+    # 先停止所有应用
+    stop_all_apps
 
     # 计算下一个索引
     NEXT_INDEX=$(( (CURRENT_INDEX + 1) % 3 ))
