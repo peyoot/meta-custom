@@ -19,6 +19,10 @@ qt_add_qml_module(vitalmonitor
     VERSION 1.0
     QML_FILES
         Main.qml
+        ConfigScreen.qml
+        MonitorScreen.qml
+        Waveform.qml
+        VitalsBlock.qml
         HeartData.js
 )
 

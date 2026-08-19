@@ -5,6 +5,10 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=fad3086693606a19735a08b2959e6b8c"
 SRC_URI = "file://CMakeLists.txt \
            file://main.cpp \
            file://Main.qml \
+           file://ConfigScreen.qml \
+           file://MonitorScreen.qml \
+           file://Waveform.qml \
+           file://VitalsBlock.qml \
            file://HeartData.js \
            file://LICENSE \
 "
