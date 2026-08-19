@@ -138,16 +138,16 @@ Item {
             spacing: 10
 
             VitalsBlock {
-                Layout.fillWidth: true; Layout.preferredHeight: 130
+                Layout.fillWidth: true; Layout.fillHeight: true
                 label: "HR"; value: page.hr; unit: "bpm"; accent: "#34d399"
                 beat: true; beatRate: page.hr
             }
             VitalsBlock {
-                Layout.fillWidth: true; Layout.preferredHeight: 130
+                Layout.fillWidth: true; Layout.fillHeight: true
                 label: "SpO₂"; value: page.spo2; unit: "%"; accent: "#38bdf8"
             }
             VitalsBlock {
-                Layout.fillWidth: true; Layout.preferredHeight: 130
+                Layout.fillWidth: true; Layout.fillHeight: true
                 label: "RESP"; value: page.resp; unit: "br/min"; accent: "#fbbf24"
             }
 

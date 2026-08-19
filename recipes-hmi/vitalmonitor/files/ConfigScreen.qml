@@ -3,11 +3,29 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 // 开机配置画面：入场动画 + 病人信息 + 开始监测
+// 所有尺寸都按屏幕高度 page.height 等比例计算（并做 min/max 限幅），
+// 保证在任意分辨率下整屏都能放得下、看得到，不依赖滚动。
 Item {
     id: page
     property var patient
 
     signal startMonitoring()
+
+    // ---------- 响应式尺寸 ----------
+    readonly property real heroHeartSize: Math.max(70,  Math.min(160, Math.min(width, height) * 0.22))
+    readonly property real heroTitleSize: Math.max(20,  Math.min(40, height * 0.062))
+    readonly property real heroSubSize:   Math.max(11,  Math.min(17, height * 0.026))
+    readonly property real heroWaveH:     Math.max(46,  Math.min(100, height * 0.15))
+    readonly property real heroSpacing:   Math.max(8,   height * 0.022)
+
+    readonly property real cardMargin:    Math.max(10,  height * 0.03)
+    readonly property real cardSpacing:   Math.max(6,   height * 0.018)
+    readonly property real cardTitleSize: Math.max(14,  Math.min(20, height * 0.03))
+    readonly property real labelSize:     Math.max(10,  Math.min(13, height * 0.02))
+    readonly property real fieldH:        Math.max(28,  Math.min(44, height * 0.062))
+    readonly property real fieldFont:     Math.max(12,  Math.min(16, height * 0.024))
+    readonly property real btnH:          Math.max(36,  Math.min(54, height * 0.08))
+    readonly property real btnFont:       Math.max(14,  Math.min(20, height * 0.028))
 
     // ---- 背景 ----
     Rectangle {
@@ -19,7 +37,6 @@ Item {
     }
     // 呼吸式光晕
     Rectangle {
-        id: glow
         anchors.centerIn: parent
         width: parent.height * 1.4; height: width; radius: width / 2
         color: "#0f766e"
@@ -33,8 +50,8 @@ Item {
 
     RowLayout {
         anchors.fill: parent
-        anchors.margins: Math.min(parent.width, parent.height) * 0.04
-        spacing: 24
+        anchors.margins: Math.min(parent.width, parent.height) * 0.035
+        spacing: Math.max(12, parent.width * 0.02)
 
         // ================= 左：英雄区（动画） =================
         Item {
@@ -45,12 +62,12 @@ Item {
             ColumnLayout {
                 anchors.centerIn: parent
                 width: parent.width
-                spacing: 18
+                spacing: page.heroSpacing
 
                 // 跳动的心脏
                 Item {
                     Layout.alignment: Qt.AlignHCenter
-                    width: 150; height: 150
+                    width: page.heroHeartSize; height: page.heroHeartSize
                     opacity: 0
                     scale: 0.7
                     Component.onCompleted: introHeart.start()
@@ -95,7 +112,7 @@ Item {
                     Layout.alignment: Qt.AlignHCenter
                     text: "VITAL MONITOR"
                     color: "#f1f5f9"
-                    font.pixelSize: 40; font.bold: true
+                    font.pixelSize: page.heroTitleSize; font.bold: true
                     font.letterSpacing: 4
                     opacity: 0
                     Component.onCompleted: titleAnim.start()
@@ -104,7 +121,7 @@ Item {
                 Text {
                     Layout.alignment: Qt.AlignHCenter
                     text: "多参数生命体征监护系统 · Qt 6"
-                    color: "#64748b"; font.pixelSize: 16
+                    color: "#64748b"; font.pixelSize: page.heroSubSize
                     opacity: 0
                     Component.onCompleted: subAnim.start()
                     NumberAnimation on opacity { id: subAnim; to: 1; duration: 600; running: false }
@@ -114,7 +131,7 @@ Item {
                 Waveform {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.preferredWidth: parent.width * 0.9
-                    Layout.preferredHeight: 90
+                    Layout.preferredHeight: page.heroWaveH
                     waveType: "ecg"; rate: 72; traceColor: "#34d399"
                     gain: 0.34
                     opacity: 0
@@ -142,64 +159,72 @@ Item {
                 NumberAnimation { target: parent; property: "x"; from: 40; to: 0; duration: 700; easing.type: Easing.OutCubic }
             }
 
-            // 用 ScrollView 兜底：无论屏幕分辨率多小，表单和按钮都能滚动到，
-            // 不会像固定高度布局那样把按钮挤出可视区域看不见。
-            ScrollView {
-                id: cardScroll
+            ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 24
-                clip: true
-                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                anchors.margins: page.cardMargin
+                spacing: page.cardSpacing
 
-                ColumnLayout {
-                    width: cardScroll.availableWidth
-                    height: Math.max(implicitHeight, cardScroll.availableHeight)
-                    spacing: 14
-
-                Text { text: "病人信息"; color: "#e2e8f0"; font.pixelSize: 20; font.bold: true }
+                Text { text: "病人信息"; color: "#e2e8f0"; font.pixelSize: page.cardTitleSize; font.bold: true }
                 Rectangle { Layout.fillWidth: true; height: 1; color: "#1e293b" }
 
                 // 姓名
-                Text { text: "姓名 NAME"; color: "#64748b"; font.pixelSize: 13 }
-                DarkField { id: nameField; Layout.fillWidth: true; text: patient ? patient.name : "" }
+                Text { text: "姓名 NAME"; color: "#64748b"; font.pixelSize: page.labelSize }
+                DarkField {
+                    id: nameField
+                    Layout.fillWidth: true
+                    text: patient ? patient.name : ""
+                    fieldHeight: page.fieldH; fontSize: page.fieldFont
+                }
 
                 // 年龄 + 性别
                 RowLayout {
-                    Layout.fillWidth: true; spacing: 16
+                    Layout.fillWidth: true; spacing: Math.max(8, page.width * 0.02)
                     ColumnLayout {
-                        Layout.fillWidth: true; spacing: 6
-                        Text { text: "年龄 AGE"; color: "#64748b"; font.pixelSize: 13 }
+                        Layout.fillWidth: true; spacing: 4
+                        Text { text: "年龄 AGE"; color: "#64748b"; font.pixelSize: page.labelSize }
                         DarkField {
                             id: ageField; Layout.fillWidth: true
                             text: patient ? patient.age.toString() : "0"
                             inputMethodHints: Qt.ImhDigitsOnly
+                            fieldHeight: page.fieldH; fontSize: page.fieldFont
                         }
                     }
                     ColumnLayout {
-                        Layout.fillWidth: true; spacing: 6
-                        Text { text: "性别 SEX"; color: "#64748b"; font.pixelSize: 13 }
+                        Layout.fillWidth: true; spacing: 4
+                        Text { text: "性别 SEX"; color: "#64748b"; font.pixelSize: page.labelSize }
                         ComboBox {
                             id: sexBox
                             Layout.fillWidth: true
+                            Layout.preferredHeight: page.fieldH
                             model: ["男 Male", "女 Female", "其他 Other"]
                         }
                     }
                 }
 
                 // 床号 + ID
-                Text { text: "床号 BED"; color: "#64748b"; font.pixelSize: 13 }
-                DarkField { id: bedField; Layout.fillWidth: true; text: patient ? patient.bed : "" }
+                Text { text: "床号 BED"; color: "#64748b"; font.pixelSize: page.labelSize }
+                DarkField {
+                    id: bedField
+                    Layout.fillWidth: true
+                    text: patient ? patient.bed : ""
+                    fieldHeight: page.fieldH; fontSize: page.fieldFont
+                }
 
-                Text { text: "病历号 ID"; color: "#64748b"; font.pixelSize: 13 }
-                DarkField { id: idField; Layout.fillWidth: true; text: patient ? patient.pid : "" }
+                Text { text: "病历号 ID"; color: "#64748b"; font.pixelSize: page.labelSize }
+                DarkField {
+                    id: idField
+                    Layout.fillWidth: true
+                    text: patient ? patient.pid : ""
+                    fieldHeight: page.fieldH; fontSize: page.fieldFont
+                }
 
-                Item { Layout.fillHeight: true }   // 弹性占位
+                Item { Layout.fillHeight: true }   // 弹性占位，把按钮推到底部
 
                 // 开始按钮
                 Button {
                     id: startBtn
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 56
+                    Layout.preferredHeight: page.btnH
                     text: ""
                     background: Rectangle {
                         radius: 12
@@ -218,7 +243,7 @@ Item {
                     }
                     contentItem: Text {
                         text: "▶  开始监测"
-                        color: "#052e26"; font.pixelSize: 20; font.bold: true
+                        color: "#052e26"; font.pixelSize: page.btnFont; font.bold: true
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -233,19 +258,21 @@ Item {
                         page.startMonitoring()
                     }
                 }
-                }
             }
         }
     }
 
-    // 复用的深色输入框
+    // 复用的深色输入框 —— 高度/字号由外部通过 fieldHeight / fontSize 传入，
+    // 从而随屏幕尺寸自适应（组件定义体内不能直接引用 page 的 id）。
     component DarkField: TextField {
+        property real fieldHeight: 42
+        property real fontSize: 16
         color: "#e2e8f0"
-        font.pixelSize: 16
+        font.pixelSize: fontSize
         selectByMouse: true
         leftPadding: 12
         background: Rectangle {
-            implicitHeight: 42
+            implicitHeight: fieldHeight
             color: "#0d1424"
             radius: 8
             border.color: parent && parent.activeFocus ? "#14b8a6" : "#1e293b"
