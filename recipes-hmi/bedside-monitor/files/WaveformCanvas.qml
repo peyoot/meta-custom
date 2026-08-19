@@ -4,30 +4,35 @@ import QtQuick.Controls 2.15
 Rectangle {
     id: root
     property string label: "ECG"
-    property string waveColor: "#34d399"   // 改为 waveColor，避免与内置 color 冲突
-    property string waveform: "ecg"   // ecg, pleth, resp
-    property real sampleRate: 250     // 采样率（Hz）
-    property real speed: 25           // 滚动速度（像素/秒）
+    property string color: "#34d399"
+    property string waveform: "ecg"
+    property real sampleRate: 240       // 采样率（Hz）
+    property real speed: 30             // 滚动速度（像素/秒），决定数据点密度
 
     color: "#0d1424"
     radius: 8
     border.color: "#1e293b"
     border.width: 1
 
-    // 数据缓冲区
+    // 数据缓冲区：固定长度，环形队列思想（实际用 shift/push）
     property var buffer: []
     property int maxPoints: 0
-    property real scrollOffset: 0
+    property real lastValue: 0
 
-    onWidthChanged: {
-        maxPoints = Math.floor(width * 2)
+    // 根据宽度计算最大点数（每像素多少个点由 speed 决定）
+    onWidthChanged: updateMaxPoints()
+    onSpeedChanged: updateMaxPoints()
+
+    function updateMaxPoints() {
+        // 每秒钟显示 speed 像素宽度的数据，采样率 sampleRate，所以每像素对应 sampleRate/speed 个点
+        // 为了简化，我们让 maxPoints = width * sampleRate / speed
+        maxPoints = Math.max(10, Math.round(width * sampleRate / speed))
+        // 如果缓冲区太长，截断
         if (buffer.length > maxPoints) {
             buffer = buffer.slice(buffer.length - maxPoints)
         }
         canvas.requestPaint()
     }
-
-    onHeightChanged: canvas.requestPaint()
 
     // 标签
     Text {
@@ -52,13 +57,13 @@ Rectangle {
             if (buffer.length < 2) return
 
             var midY = height / 2
-            var amp = height * 0.45
+            var amp = height * 0.38      // 振幅为高度的38%，留边
             var stepX = width / (buffer.length - 1)
 
-            ctx.strokeStyle = waveColor   // 使用 waveColor
+            // 绘制波形线
+            ctx.strokeStyle = color
             ctx.lineWidth = 2
             ctx.beginPath()
-
             for (var i = 0; i < buffer.length; i++) {
                 var x = i * stepX
                 var y = midY - buffer[i] * amp
@@ -66,6 +71,15 @@ Rectangle {
                 else ctx.lineTo(x, y)
             }
             ctx.stroke()
+
+            // 绘制最右侧的笔尖圆点（最后一个数据点）
+            var lastIdx = buffer.length - 1
+            var dotX = lastIdx * stepX
+            var dotY = midY - buffer[lastIdx] * amp
+            ctx.fillStyle = color
+            ctx.beginPath()
+            ctx.arc(dotX, dotY, 4, 0, 2 * Math.PI)
+            ctx.fill()
         }
     }
 
@@ -78,13 +92,13 @@ Rectangle {
             var val = generateSample(waveform)
             buffer.push(val)
             if (buffer.length > maxPoints) {
-                buffer.shift()
+                buffer.shift()   // 移除最旧的数据，实现滚动
             }
             canvas.requestPaint()
         }
     }
 
-    // 波形样本生成器
+    // 波形样本生成器（与之前相同）
     function generateSample(type) {
         var t = Date.now() / 1000
         switch(type) {
@@ -104,8 +118,9 @@ Rectangle {
     }
 
     Component.onCompleted: {
-        maxPoints = Math.floor(width * 2)
-        for (var i = 0; i < maxPoints; i++) {
+        updateMaxPoints()
+        // 填充初始数据
+        while (buffer.length < maxPoints) {
             buffer.push(generateSample(waveform))
         }
         canvas.requestPaint()
