@@ -33,8 +33,8 @@ Item {
 
     RowLayout {
         anchors.fill: parent
-        anchors.margins: parent.width * 0.05
-        spacing: 40
+        anchors.margins: Math.min(parent.width, parent.height) * 0.04
+        spacing: 24
 
         // ================= 左：英雄区（动画） =================
         Item {
@@ -133,6 +133,7 @@ Item {
             radius: 16
             border.color: "#1e293b"; border.width: 1
             opacity: 0
+            clip: true
             x: 40
             Component.onCompleted: cardAnim.start()
             ParallelAnimation {
@@ -141,12 +142,21 @@ Item {
                 NumberAnimation { target: parent; property: "x"; from: 40; to: 0; duration: 700; easing.type: Easing.OutCubic }
             }
 
-            ColumnLayout {
+            // 用 ScrollView 兜底：无论屏幕分辨率多小，表单和按钮都能滚动到，
+            // 不会像固定高度布局那样把按钮挤出可视区域看不见。
+            ScrollView {
+                id: cardScroll
                 anchors.fill: parent
-                anchors.margins: 28
-                spacing: 16
+                anchors.margins: 24
+                clip: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
-                Text { text: "病人信息"; color: "#e2e8f0"; font.pixelSize: 22; font.bold: true }
+                ColumnLayout {
+                    width: cardScroll.availableWidth
+                    height: Math.max(implicitHeight, cardScroll.availableHeight)
+                    spacing: 14
+
+                Text { text: "病人信息"; color: "#e2e8f0"; font.pixelSize: 20; font.bold: true }
                 Rectangle { Layout.fillWidth: true; height: 1; color: "#1e293b" }
 
                 // 姓名
@@ -222,6 +232,7 @@ Item {
                         }
                         page.startMonitoring()
                     }
+                }
                 }
             }
         }

@@ -60,13 +60,16 @@ Item {
         }
 
         // 尺寸变化时清空重置，避免错位
+        // available 为 false 时画布尚未就绪，此时调用 getContext() 只会打印警告
         function resetTrace() {
+            headX = 0; phase = 0; prevX = 0; prevY = height * baselineFrac
+            if (!available) return
             var ctx = getContext("2d")
             if (ctx) ctx.reset()
-            headX = 0; phase = 0; prevX = 0; prevY = height * baselineFrac
         }
         onWidthChanged:  resetTrace()
         onHeightChanged: resetTrace()
+        onAvailableChanged: if (available) resetTrace()
 
         onPaint: {
             var w = width, h = height

@@ -12,8 +12,10 @@ ApplicationWindow {
     title: "Vital Monitor (Qt6)"
 
     // 全局病人信息（配置画面与监测画面共享）
+    // 注意：id 不能叫 "patient" —— 否则下面 ConfigScreen { patient: patient } 会被
+    // 解析成 ConfigScreen 自身 patient 属性的自绑定（binding loop），而不是引用这个对象。
     QtObject {
-        id: patient
+        id: patientData
         property string name: "Zhang San"
         property int    age:  45
         property string sex:  "男 Male"
@@ -38,7 +40,7 @@ ApplicationWindow {
     Component {
         id: configComp
         ConfigScreen {
-            patient: patient
+            patient: patientData
             onStartMonitoring: stack.push(monitorComp)
         }
     }
@@ -46,7 +48,7 @@ ApplicationWindow {
     Component {
         id: monitorComp
         MonitorScreen {
-            patient: patient
+            patient: patientData
             onExitRequested: stack.pop()
         }
     }
