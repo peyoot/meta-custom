@@ -4,7 +4,7 @@ import QtQuick.Controls 2.15
 Rectangle {
     id: root
     property string label: "ECG"
-    property string color: "#34d399"
+    property string waveColor: "#34d399"   // 改为 waveColor，避免与内置 color 冲突
     property string waveform: "ecg"   // ecg, pleth, resp
     property real sampleRate: 250     // 采样率（Hz）
     property real speed: 25           // 滚动速度（像素/秒）
@@ -20,7 +20,7 @@ Rectangle {
     property real scrollOffset: 0
 
     onWidthChanged: {
-        maxPoints = Math.floor(width * 2)  // 每像素2个点，保证平滑
+        maxPoints = Math.floor(width * 2)
         if (buffer.length > maxPoints) {
             buffer = buffer.slice(buffer.length - maxPoints)
         }
@@ -52,10 +52,10 @@ Rectangle {
             if (buffer.length < 2) return
 
             var midY = height / 2
-            var amp = height * 0.45   // 振幅为高度的45%
+            var amp = height * 0.45
             var stepX = width / (buffer.length - 1)
 
-            ctx.strokeStyle = color
+            ctx.strokeStyle = waveColor   // 使用 waveColor
             ctx.lineWidth = 2
             ctx.beginPath()
 
@@ -69,7 +69,7 @@ Rectangle {
         }
     }
 
-    // 模拟数据生成（真实应用中应从传感器读取）
+    // 模拟数据生成
     Timer {
         interval: 1000 / sampleRate
         running: true
@@ -84,12 +84,11 @@ Rectangle {
         }
     }
 
-    // 波形样本生成器（模拟三种波形）
+    // 波形样本生成器
     function generateSample(type) {
         var t = Date.now() / 1000
         switch(type) {
             case "ecg":
-                // 模拟 ECG 的 QRS 复合波
                 var phase = (t * 1.2) % 1.0
                 if (phase < 0.06) return -0.2 + 1.2 * Math.sin(phase / 0.06 * Math.PI)
                 else if (phase < 0.13) return -0.1 + 0.3 * Math.sin((phase - 0.07) / 0.04 * Math.PI)
@@ -106,7 +105,6 @@ Rectangle {
 
     Component.onCompleted: {
         maxPoints = Math.floor(width * 2)
-        // 填充初始数据
         for (var i = 0; i < maxPoints; i++) {
             buffer.push(generateSample(waveform))
         }

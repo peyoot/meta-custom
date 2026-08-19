@@ -122,21 +122,21 @@ Window {
                 width: parent.width
                 height: (parent.height - 24) / 3
                 label: "ECG II"
-                color: "#34d399"
+                waveColor: "#34d399"
                 waveform: "ecg"
             }
             WaveformCanvas {
                 width: parent.width
                 height: (parent.height - 24) / 3
                 label: "SpO₂ Pleth"
-                color: "#60a5fa"
+                waveColor: "#60a5fa"
                 waveform: "pleth"
             }
             WaveformCanvas {
                 width: parent.width
                 height: (parent.height - 24) / 3
                 label: "RESP"
-                color: "#fbbf24"
+                waveColor: "#fbbf24"
                 waveform: "resp"
             }
         }
