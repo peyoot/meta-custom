@@ -4,98 +4,151 @@ import QtQuick.Controls 2.15
 Rectangle {
     id: root
     property string label: "ECG"
-    property string waveColor: "#34d399"   // 已改为 waveColor，避免冲突
+    property string waveColor: "#34d399"
     property string waveform: "ecg"
     property real sampleRate: 240
-    property real speed: 30                // 像素/秒，控制滚动速度
+    property real pixelsPerSecond: 25   // 25 mm/s 标准心电走纸速度
 
     color: "#0d1424"
     radius: 8
     border.color: "#1e293b"
     border.width: 1
+    clip: true
 
-    // 数据缓冲区：不限长度，但限制最大容量以防内存溢出
-    property var buffer: []
+    // ---------- 数据 ----------
+    property var buffer: []   // 存 {t, v}，t 为相对时间(秒)，v 为归一化值
+    property real startTime: 0
 
-    // 每像素对应的点数（固定值，决定曲线密度）
-    readonly property real pixelsPerPoint: 2.0
+    // ---------- 背景网格 ----------
+    Canvas {
+        id: gridCanvas
+        anchors.fill: parent
+        z: 0
+        onPaint: {
+            var ctx = getContext("2d")
+            ctx.clearRect(0, 0, width, height)
 
-    // 标签
-    Text {
-        text: label
-        color: "#64748b"
-        font.pixelSize: 14
-        anchors.left: parent.left
-        anchors.top: parent.top
-        anchors.margins: 8
-        z: 1
+            // 网格参数（模拟 5mm 大格 / 1mm 小格）
+            var big = 50   // 大格间距(像素)，对应 1 秒 @25px/s
+            var small = 10  // 小格间距
+
+            // 小格
+            ctx.strokeStyle = "#111827"
+            ctx.lineWidth = 1
+            ctx.beginPath()
+            for (var x = 0; x < width; x += small) {
+                ctx.moveTo(x + 0.5, 0)
+                ctx.lineTo(x + 0.5, height)
+            }
+            for (var y = 0; y < height; y += small) {
+                ctx.moveTo(0, y + 0.5)
+                ctx.lineTo(width, y + 0.5)
+            }
+            ctx.stroke()
+
+            // 大格
+            ctx.strokeStyle = "#1f2937"
+            ctx.lineWidth = 1.5
+            ctx.beginPath()
+            for (var X = 0; X < width; X += big) {
+                ctx.moveTo(X + 0.5, 0)
+                ctx.lineTo(X + 0.5, height)
+            }
+            for (var Y = 0; Y < height; Y += big) {
+                ctx.moveTo(0, Y + 0.5)
+                ctx.lineTo(width, Y + 0.5)
+            }
+            ctx.stroke()
+
+            // 中线（零位参考）
+            ctx.strokeStyle = "#374151"
+            ctx.lineWidth = 1
+            ctx.setLineDash([4, 4])
+            ctx.beginPath()
+            ctx.moveTo(0, height / 2 + 0.5)
+            ctx.lineTo(width, height / 2 + 0.5)
+            ctx.stroke()
+            ctx.setLineDash([])
+        }
     }
 
+    // ---------- 波形画布 ----------
     Canvas {
         id: canvas
         anchors.fill: parent
         antialiasing: true
+        z: 1
 
         onPaint: {
             var ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
 
-            var data = buffer
-            if (data.length < 2) return
+            if (buffer.length < 2) return
 
-            // 计算需要绘制的点数：画布宽度 / 每像素点数
-            var drawCount = Math.min(data.length, Math.floor(width / pixelsPerPoint))
-            // 只取最后 drawCount 个点（最新的数据）
-            var startIdx = data.length - drawCount
-            var slice = data.slice(startIdx)
-
+            var now = (Date.now() / 1000) - startTime
             var midY = height / 2
             var amp = height * 0.38
-            var stepX = width / (slice.length - 1)
 
-            // 绘制波形线
             ctx.strokeStyle = waveColor
             ctx.lineWidth = 2
             ctx.beginPath()
-            for (var i = 0; i < slice.length; i++) {
-                var x = i * stepX
-                var y = midY - slice[i] * amp
-                if (i === 0) ctx.moveTo(x, y)
+
+            for (var i = 0; i < buffer.length; i++) {
+                var sample = buffer[i]
+                var age = now - sample.t
+                var x = width - age * pixelsPerSecond
+                if (x < -5 || x > width + 5) continue  // 屏幕外丢弃
+                var y = midY - sample.v * amp
+                if (i === 0 || buffer[i - 1].t > sample.t) ctx.moveTo(x, y)
                 else ctx.lineTo(x, y)
             }
             ctx.stroke()
 
-            // 笔尖圆点（最右侧的最新数据点）
-            var lastIdx = slice.length - 1
-            var dotX = lastIdx * stepX
-            var dotY = midY - slice[lastIdx] * amp
+            // 笔尖圆点（最新点，紧贴右侧）
+            var last = buffer[buffer.length - 1]
+            var lx = width - (now - last.t) * pixelsPerSecond
+            var ly = midY - last.v * amp
             ctx.fillStyle = waveColor
             ctx.beginPath()
-            ctx.arc(dotX, dotY, 4, 0, 2 * Math.PI)
+            ctx.arc(lx, ly, 4, 0, 2 * Math.PI)
             ctx.fill()
         }
     }
 
-    // 模拟数据生成
+    // ---------- 时间轴标签 ----------
+    Row {
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
+        anchors.margins: 6
+        spacing: 6
+        z: 2
+        Text { text: "1s/div"; color: "#4b5563"; font.pixelSize: 10 }
+    }
+
+    // ---------- 采样 Timer ----------
     Timer {
         interval: 1000 / sampleRate
         running: true
         repeat: true
         onTriggered: {
-            var val = generateSample(waveform)
-            buffer.push(val)
-            // 限制缓冲区大小，防止无限增长（保留足够多的点用于滚动）
-            if (buffer.length > 5000) {
+            var t = (Date.now() / 1000) - startTime
+            var v = generateSample(waveform)
+            buffer.push({ t: t, v: v })
+
+            // 只保留屏幕内+1秒的数据
+            var cutoff = t - (width / pixelsPerSecond) - 1
+            while (buffer.length > 0 && buffer[0].t < cutoff) {
                 buffer.shift()
             }
+
             canvas.requestPaint()
         }
     }
 
-    // 波形样本生成器（与之前相同）
+    // ---------- 波形生成 ----------
     function generateSample(type) {
         var t = Date.now() / 1000
-        switch(type) {
+        switch (type) {
             case "ecg":
                 var phase = (t * 1.2) % 1.0
                 if (phase < 0.06) return -0.2 + 1.2 * Math.sin(phase / 0.06 * Math.PI)
@@ -111,12 +164,14 @@ Rectangle {
         }
     }
 
+    // ---------- 初始化 ----------
     Component.onCompleted: {
-        // 填充初始数据，使画布一开始就有波形
-        var initialCount = Math.floor(width / pixelsPerPoint)
-        for (var i = 0; i < initialCount; i++) {
-            buffer.push(generateSample(waveform))
-        }
+        startTime = Date.now() / 1000
         canvas.requestPaint()
+        gridCanvas.requestPaint()
     }
+
+    // 尺寸变化时重绘网格
+    onWidthChanged: gridCanvas.requestPaint()
+    onHeightChanged: gridCanvas.requestPaint()
 }
