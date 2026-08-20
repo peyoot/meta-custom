@@ -1,0 +1,89 @@
+From 7f3707f71f59705ca65c9dabc97fe2d09f995aac Mon Sep 17 00:00:00 2001
+From: peyoot <peyoot@hotmail.com>
+Date: Fri, 14 Aug 2026 02:13:21 -0500
+Subject: [PATCH] unlock MP255C frequency
+
+---
+ core/arch/arm/dts/stm32mp251.dtsi | 10 ++--------
+ core/arch/arm/dts/stm32mp255.dtsi | 10 ++--------
+ core/drivers/stm32_cpu_opp.c      |  2 +-
+ core/drivers/stm32_gpu_opp.c      |  2 +-
+ 4 files changed, 6 insertions(+), 18 deletions(-)
+
+diff --git a/core/arch/arm/dts/stm32mp251.dtsi b/core/arch/arm/dts/stm32mp251.dtsi
+index 4d36ceb70..2912cf973 100644
+--- a/core/arch/arm/dts/stm32mp251.dtsi
++++ b/core/arch/arm/dts/stm32mp251.dtsi
+@@ -36,17 +36,11 @@
+ 	cpu0_opp_table: cpu0-opp-table {
+ 		compatible = "operating-points-v2";
+ 
+-		opp-1200000000 {
+-			opp-hz = /bits/ 64 <1200000000>;
+-			opp-microvolt = <800000>;
+-			opp-supported-hw = <0x3>;
+-			st,opp-default;
+-		};
+-
+ 		opp-1500000000 {
+ 			opp-hz = /bits/ 64 <1500000000>;
+ 			opp-microvolt = <910000>;
+-			opp-supported-hw = <0x2>;
++			opp-supported-hw = <0x3>;
++			st,opp-default;
+ 		};
+ 	};
+ 
+diff --git a/core/arch/arm/dts/stm32mp255.dtsi b/core/arch/arm/dts/stm32mp255.dtsi
+index 0423678ac..972e7d92d 100644
+--- a/core/arch/arm/dts/stm32mp255.dtsi
++++ b/core/arch/arm/dts/stm32mp255.dtsi
+@@ -9,17 +9,11 @@
+ 	gpu_opp_table: opp-table-gpu {
+ 		compatible = "operating-points-v2";
+ 
+-		opp-800000000 {
+-			opp-hz = /bits/ 64 <800000000>;
+-			opp-microvolt = <800000>;
+-			opp-supported-hw = <0x3>;
+-			st,opp-default;
+-		};
+-
+ 		opp-900000000 {
+ 			opp-hz = /bits/ 64 <900000000>;
+ 			opp-microvolt = <900000>;
+-			opp-supported-hw = <0x2>;
++			opp-supported-hw = <0x3>;
++			st,opp-default;
+ 		};
+ 	};
+ };
+diff --git a/core/drivers/stm32_cpu_opp.c b/core/drivers/stm32_cpu_opp.c
+index cfcf0fd6a..3b17ba32b 100644
+--- a/core/drivers/stm32_cpu_opp.c
++++ b/core/drivers/stm32_cpu_opp.c
+@@ -742,7 +742,7 @@ static TEE_Result stm32_cpu_opp_get_dt_subnode(const void *fdt, int node)
+ 		cpu_opp.dvfs[i].freq_khz = freq_khz;
+ 		cpu_opp.dvfs[i].volt_uv = volt_uv;
+ 
+-		DMSG("Found OPP %u (%"PRIu64"kHz/%"PRIu32"uV) from DT",
++		IMSG("Found CPU OPP %u (%"PRIu64"kHz/%"PRIu32"uV) from DT",
+ 		     i, freq_khz, volt_uv);
+ 
+ 		if (fdt_getprop(fdt, subnode, "st,opp-default", NULL) &&
+diff --git a/core/drivers/stm32_gpu_opp.c b/core/drivers/stm32_gpu_opp.c
+index 7e9a967bf..42997c7c3 100644
+--- a/core/drivers/stm32_gpu_opp.c
++++ b/core/drivers/stm32_gpu_opp.c
+@@ -276,7 +276,7 @@ static TEE_Result stm32_gpu_opp_get_dt_subnode(const void *fdt, int node)
+ 		gpu_opp.dvfs[i].freq_khz = freq_khz;
+ 		gpu_opp.dvfs[i].volt_uv = volt_uv;
+ 
+-		DMSG("Found OPP %u (%"PRIu64"kHz/%"PRIu32"uV) from DT",
++		IMSG("Found GPU OPP %u (%"PRIu64"kHz/%"PRIu32"uV) from DT",
+ 		     i, freq_khz, volt_uv);
+ 
+ 		if (fdt_getprop(fdt, subnode, "st,opp-default", NULL) &&
+-- 
+2.25.1
+
