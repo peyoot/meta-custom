@@ -9,7 +9,7 @@ SRC_URI += " \
 
 # 添加自定义设备树仓库
 SRC_URI:append = " \
-    git://github.com/peyoot/ccmp25_dt;branch=ccmp25plc;protocol=https;destsuffix=ccmp25_dt;name=ccmp25dt \
+    git://github.com/peyoot/ccmp25_dt;branch=scarthgap-ccmp25dvk;protocol=https;destsuffix=ccmp25_dt;name=ccmp25dt \
 "
 
 # 指定自定义设备树仓库的提交哈希
@@ -32,10 +32,7 @@ do_patch:append() {
 }
 
 DT_FILES = " \
-    ccmp25-plc.dts \
-    ccmp25-plc_pwm_do1_2.dtso \
-    ccmp25-plc_eth3.dtso \
-    ccmp25-plc_fix_eth2_100m.dtso \
+    ccmp25-dvk-test.dts \
 "
 
 # 定义一个 Python 函数来执行安装命令
@@ -59,10 +56,7 @@ python install_dts() {
 
 # 为 ccmp25-dvk机器添加设备树和 overlay
 STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
-    ccmp25-plc.dtb \
-    ccmp25-plc_pwm_do1_2.dtbo \
-    ccmp25-plc_eth3.dtbo \
-    ccmp25-plc_fix_eth2_100m.dtbo \
+    ccmp25-dvk-test.dtb \
 "
 
 do_install:prepend:ccmp2() {

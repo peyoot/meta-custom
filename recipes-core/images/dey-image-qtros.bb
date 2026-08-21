@@ -1,7 +1,4 @@
 # meta-custom/recipes-core/images/dey-image-qtros.bb
-# add ccmp25plc device tree files
-STM32MP_KERNEL_DEVICETREE:ccmp25-dvk:append = " ccmp25-plc.dtb ccmp25-plc_pwm_do1_2.dtbo ccmp25-plc_fix_eth2_100m.dtbo ccmp25-plc_eth3.dtbo"
-
 #
 # Copyright (C) 2016-2024, Digi International Inc.
 #
