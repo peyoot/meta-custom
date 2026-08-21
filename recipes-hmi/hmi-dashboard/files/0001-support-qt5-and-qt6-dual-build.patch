@@ -1,0 +1,93 @@
+Support building against either Qt5 (meta-qt5) or Qt6 (meta-qt6) from
+the same CMakeLists.txt. Upstream only supports Qt6 (qt_add_executable,
+hardcoded find_package(Qt6 ...) and Qt6:: link targets). This patch
+detects the available major version at configure time instead, so the
+hmi-dashboard_git.bb recipe can select the target Qt version via its
+QT_MAJOR_VERSION variable.
+
+Upstream-Status: Inappropriate [DEY-specific Qt5/Qt6 dual build support]
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -7,20 +7,24 @@
+ set(CMAKE_CXX_STANDARD 17)
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ 
++include(GNUInstallDirs)
++
+ # ==================== QT CONFIGURATION ====================
+ 
+ set(CMAKE_AUTOMOC ON)
+ set(CMAKE_AUTORCC ON)
+ set(CMAKE_AUTOUIC ON)
+ 
+-# Find Qt6 packages
+-find_package(Qt6 6.2 REQUIRED COMPONENTS
+-    Core
+-    Gui
+-    Qml
+-    Quick
+-    QuickControls2
+-)
++# 同时兼容 Qt5 (meta-qt5) 与 Qt6 (meta-qt6)：手动探测主版本。
++# 不用 find_package(QT NAMES Qt6 Qt5 ...) 两步写法，因为它依赖的 QTConfig.cmake
++# 引导文件在 Qt 5.15（meta-qt5 用的版本）里不存在，会直接配置失败。
++find_package(Qt6 QUIET COMPONENTS Core Gui Qml Quick QuickControls2)
++if(Qt6_FOUND)
++    set(QT_VERSION_MAJOR 6)
++else()
++    find_package(Qt5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
++    set(QT_VERSION_MAJOR 5)
++endif()
+ 
+ # ==================== SOURCE FILES ====================
+ 
+@@ -38,10 +42,18 @@
+ 
+ # ==================== EXECUTABLE TARGET ====================
+ 
+-qt_add_executable(InstrumentCluster
+-    ${PROJECT_SOURCES}
+-    ${PROJECT_RESOURCES}
+-)
++if(QT_VERSION_MAJOR GREATER_EQUAL 6)
++    qt_add_executable(InstrumentCluster
++        ${PROJECT_SOURCES}
++        ${PROJECT_RESOURCES}
++    )
++else()
++    # qt_add_executable 是 Qt6 才有的 CMake API，Qt5 用普通 add_executable
++    add_executable(InstrumentCluster
++        ${PROJECT_SOURCES}
++        ${PROJECT_RESOURCES}
++    )
++endif()
+ 
+ # ==================== INCLUDE DIRECTORIES ====================
+ 
+@@ -52,11 +64,11 @@
+ # ==================== LINK LIBRARIES ====================
+ 
+ target_link_libraries(InstrumentCluster PRIVATE
+-    Qt6::Core
+-    Qt6::Gui
+-    Qt6::Qml
+-    Qt6::Quick
+-    Qt6::QuickControls2
++    Qt${QT_VERSION_MAJOR}::Core
++    Qt${QT_VERSION_MAJOR}::Gui
++    Qt${QT_VERSION_MAJOR}::Qml
++    Qt${QT_VERSION_MAJOR}::Quick
++    Qt${QT_VERSION_MAJOR}::QuickControls2
+ )
+ 
+ # ==================== COMPILER FLAGS ====================
+@@ -94,7 +106,7 @@
+ message(STATUS "========================================")
+ message(STATUS "  Premium Instrument Cluster")
+ message(STATUS "========================================")
+-message(STATUS "Qt Version: ${Qt6_VERSION}")
++message(STATUS "Qt Version: ${QT_VERSION_MAJOR} (${Qt${QT_VERSION_MAJOR}_VERSION})")
+ message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
+ message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")
+ message(STATUS "========================================")
