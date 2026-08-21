@@ -1,0 +1,159 @@
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Window 2.15
+import QtQuick.Layouts 2.15
+
+Window {
+    id: window
+    visible: true
+    visibility: Window.FullScreen
+    color: "#05070d"
+    title: "Bedside Monitor (Qt6)"
+
+    // 顶部信息栏
+    Rectangle {
+        id: topBar
+        width: parent.width
+        height: 80
+        color: "#0a0f1a"
+        border.color: "#152033"
+        border.width: 1
+
+        // 将 Row 改为 RowLayout，使其支持 Layout.fillWidth
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 24
+            anchors.rightMargin: 24
+            spacing: 20
+
+            Text {
+                text: "VITASCOPE BEDSIDE MONITOR"
+                color: "#60a5fa"
+                font.bold: true
+                font.pixelSize: 22
+                Layout.alignment: Qt.AlignVCenter   // 垂直居中
+            }
+            Text {
+                text: "Patient: #PT-28471"
+                color: "#94a3b8"
+                font.pixelSize: 16
+                Layout.alignment: Qt.AlignVCenter
+            }
+            Item { Layout.fillWidth: true }         // 现在有效，占据剩余空间
+            Text {
+                text: "● MONITORING"
+                color: "#34d399"
+                font.pixelSize: 16
+                Layout.alignment: Qt.AlignVCenter
+            }
+            Text {
+                text: "❤"
+                color: "#ef4444"          // 红色
+                font.pixelSize: 28
+                Layout.alignment: Qt.AlignVCenter
+                // 心跳动画
+                NumberAnimation on scale {
+                    id: heartBeatAnim
+                    from: 1.0
+                    to: 1.3
+                    duration: 600          // 基础周期，会根据心率动态调整
+                    running: true
+                    loops: Animation.Infinite
+                    easing.type: Easing.InOutQuad
+                }
+                // 心率变化时调整动画速度
+                Connections {
+                    target: vitals
+                    function onHrChanged() {
+                        var hr = vitals.hr
+                        if (hr > 0) {
+                            // 每分钟心跳数转换为毫秒周期：60000 / hr，再除以2（一次缩放为半个周期）
+                            heartBeatAnim.duration = 60000 / hr / 2
+                        }
+                    }
+                }
+            }           
+            Text {
+                id: clockText
+                color: "#e2e8f0"
+                font.pixelSize: 20
+                Layout.alignment: Qt.AlignVCenter
+            }
+            // Timer 已移出布局，放在下方
+        }
+    }
+
+    // 时钟 Timer（从布局中移出，作为 Window 的直接子项）
+    Timer {
+        interval: 1000
+        running: true
+        repeat: true
+        onTriggered: {
+            clockText.text = Qt.formatTime(new Date(), "hh:mm:ss")
+        }
+    }
+
+    // 主体行：左数值 + 右波形（保持不变）
+    Row {
+        anchors.top: topBar.bottom
+        anchors.topMargin: 12
+        anchors.left: parent.left
+        anchors.leftMargin: 12
+        anchors.right: parent.right
+        anchors.rightMargin: 12
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 12
+        spacing: 12
+
+        // 左侧：数值面板
+        VitalsPanel {
+            id: vitals
+            width: 380
+            height: parent.height
+        }
+
+        // 右侧：波形区
+        Column {
+            width: parent.width - 392
+            height: parent.height
+            spacing: 12
+
+            WaveformCanvas {
+                width: parent.width
+                height: (parent.height - 24) / 3
+                label: "ECG II"
+                waveColor: "#34d399"
+                waveform: "ecg"
+            }
+            WaveformCanvas {
+                width: parent.width
+                height: (parent.height - 24) / 3
+                label: "SpO₂ Pleth"
+                waveColor: "#60a5fa"
+                waveform: "pleth"
+            }
+            WaveformCanvas {
+                width: parent.width
+                height: (parent.height - 24) / 3
+                label: "RESP"
+                waveColor: "#fbbf24"
+                waveform: "resp"
+            }
+        }
+    }
+
+    // 模拟数据驱动
+    Timer {
+        interval: 1000
+        running: true
+        repeat: true
+        onTriggered: {
+            vitals.hr = 70 + Math.floor(Math.random() * 35)
+            vitals.spo2 = 96 + Math.floor(Math.random() * 4)
+            vitals.resp = 14 + Math.floor(Math.random() * 8)
+            vitals.nibpSys = 115 + Math.floor(Math.random() * 25)
+            vitals.nibpDia = 70 + Math.floor(Math.random() * 15)
+            vitals.temp = (36.5 + Math.random()).toFixed(1)
+        }
+    }
+}
