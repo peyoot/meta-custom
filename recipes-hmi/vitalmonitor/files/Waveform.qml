@@ -1,4 +1,4 @@
-import QtQuick
+import QtQuick 2.15
 import "HeartData.js" as HD
 
 // 医院监护仪风格的「扫描头」波形。

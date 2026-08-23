@@ -1,6 +1,6 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.3
 
 // 开机配置画面：入场动画 + 病人信息 + 开始监测
 // 所有尺寸都按屏幕高度 page.height 等比例计算（并做 min/max 限幅），
