@@ -35,16 +35,17 @@ Item {
             GradientStop { position: 1.0; color: "#0b1a1a" }
         }
     }
-    // 呼吸式光晕
+    // 呼吸式光晕（略微超出屏幕做柔光溢出感，但不宜太夸张，避免呼吸到最大时把
+    // 生硬的圆形边界甩到屏幕中央）
     Rectangle {
         anchors.centerIn: parent
-        width: parent.height * 1.4; height: width; radius: width / 2
+        width: Math.min(parent.width, parent.height) * 1.1; height: width; radius: width / 2
         color: "#0f766e"
         opacity: 0.12
         SequentialAnimation on scale {
             loops: Animation.Infinite
-            NumberAnimation { from: 0.85; to: 1.1; duration: 3000; easing.type: Easing.InOutSine }
-            NumberAnimation { from: 1.1; to: 0.85; duration: 3000; easing.type: Easing.InOutSine }
+            NumberAnimation { from: 0.92; to: 1.05; duration: 3000; easing.type: Easing.InOutSine }
+            NumberAnimation { from: 1.05; to: 0.92; duration: 3000; easing.type: Easing.InOutSine }
         }
     }
 
@@ -54,10 +55,12 @@ Item {
         spacing: Math.max(12, parent.width * 0.02)
 
         // ================= 左：英雄区（动画） =================
+        // 只有这一个 fillWidth 项，会自动吃掉卡片固定宽度之外的全部剩余空间——
+        // 不再依赖 preferredWidth 比例 + maximumWidth 钳制的组合（那个写法在
+        // Qt5/Qt6 的 QtQuickLayouts 实现里对边界情况处理不一致，导致卡片宽度算成 0）。
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.preferredWidth: 5
 
             ColumnLayout {
                 anchors.centerIn: parent
@@ -144,8 +147,8 @@ Item {
         // ================= 右：病人信息表单 =================
         Rectangle {
             Layout.fillHeight: true
-            Layout.preferredWidth: 4
-            Layout.maximumWidth: 420
+            // 直接算出确定的像素宽度，不用 fillWidth+maximumWidth 协商
+            Layout.preferredWidth: Math.min(420, page.width * 0.42)
             color: "#0b1120"
             radius: 16
             border.color: "#1e293b"; border.width: 1
