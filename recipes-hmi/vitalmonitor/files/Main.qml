@@ -6,9 +6,10 @@ ApplicationWindow {
     id: app
     visible: true
     visibility: Window.FullScreen
-    // 不写死像素尺寸，直接跟随实际屏幕分辨率，避免与 FullScreen 冲突
-    width: Screen.width
-    height: Screen.height
+    // 不设置 width/height：eglfs 这类无合成器的嵌入式后端本来就是
+    // "每块屏幕一个、永远铺满"的单窗口模型，显式指定尺寸（哪怕绑定 Screen.width/height）
+    // 反而会和平台自身的全屏铺满逻辑冲突，导致窗口实际尺寸和物理屏幕对不上。
+    // bedside-monitor 用的 Window 类型就是不设置尺寸，铺满正常，这里改成同样的做法。
     color: "#05070d"
     title: "Vital Monitor (Qt6)"
 
