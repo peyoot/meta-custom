@@ -61,7 +61,7 @@ IMAGE_INSTALL:append = " \
 IMAGE_INSTALL:append = " igh-ethercat "
 
 
-IMAGE_INSTALL:append = " hmi-dashboard vitalmonitor bedside-monitor "
+IMAGE_INSTALL:append = " hmi-dashboard vitalmonitor bedside-monitor gpio-demo-ctrl homeaddons"
 
 IMAGE_INSTALL:append = " packagegroup-dey-webkit weston weston-init "
 
