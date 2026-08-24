@@ -6,10 +6,12 @@ ApplicationWindow {
     id: app
     visible: true
     visibility: Window.FullScreen
-    // 不设置 width/height：eglfs 这类无合成器的嵌入式后端本来就是
-    // "每块屏幕一个、永远铺满"的单窗口模型，显式指定尺寸（哪怕绑定 Screen.width/height）
-    // 反而会和平台自身的全屏铺满逻辑冲突，导致窗口实际尺寸和物理屏幕对不上。
-    // bedside-monitor 用的 Window 类型就是不设置尺寸，铺满正常，这里改成同样的做法。
+    // 实际跑在 Wayland/weston 上：合成器管理窗口尺寸，未设置 width/height 的窗口
+    // 初始拿到的是合成器给的默认尺寸，FullScreen 请求生效的时机不完全可控。
+    // 显式绑定屏幕尺寸能让 QML 内部布局始终按照确定的真实分辨率计算，不依赖
+    // 合成器自动铺满的时机。
+    width: Screen.width
+    height: Screen.height
     color: "#05070d"
     title: "Vital Monitor (Qt6)"
 
