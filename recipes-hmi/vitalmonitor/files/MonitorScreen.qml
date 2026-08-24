@@ -1,6 +1,6 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.3
 
 // 心电监测主界面：三条扫描波形 + 大号数值 + 返回配置
 Item {
@@ -58,7 +58,7 @@ Item {
                     border.color: "#334155"; border.width: 1
                 }
                 contentItem: Text {
-                    text: "‹  配置"; color: "#cbd5e1"; font.pixelSize: 15; font.bold: true
+                    text: "‹  Setup"; color: "#cbd5e1"; font.pixelSize: 15; font.bold: true
                     horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                 }
                 onClicked: page.exitRequested()
@@ -73,7 +73,7 @@ Item {
             Text {
                 Layout.leftMargin: 8
                 text: patient
-                      ? (patient.name + "  ·  " + patient.sex + "  ·  " + patient.age + "岁  ·  床 " + patient.bed)
+                      ? (patient.name + "  ·  " + patient.sex + "  ·  " + patient.age + " yrs  ·  Bed " + patient.bed)
                       : ""
                 color: "#94a3b8"; font.pixelSize: 15
             }

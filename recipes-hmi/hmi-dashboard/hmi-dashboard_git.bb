@@ -1,22 +1,42 @@
-SUMMARY = "OEM-grade automotive instrument cluster demo (Qt6 QML)"
+SUMMARY = "OEM-grade automotive instrument cluster demo (Qt QML)"
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
-SRC_URI = "git://github.com/Ibrahim4594/Hmi-Car-Dashboard-.git;branch=main;protocol=https"
+SRC_URI = "git://github.com/Ibrahim4594/Hmi-Car-Dashboard-.git;branch=main;protocol=https \
+           file://0001-support-qt5-and-qt6-dual-build.patch \
+"
 SRCREV = "${AUTOREV}"
 PV = "1.0+git${SRCPV}"
 
 S = "${WORKDIR}/git"
 
-inherit qt6-cmake
+# 同时支持 bblayers.conf 里选用 meta-qt5 或 meta-qt6：
+#   - 默认按 meta-qt6 编译 (QT_MAJOR_VERSION = "6")
+#   - 切到 meta-qt5 时，在 local.conf / distro 配置里覆盖：
+#       QT_MAJOR_VERSION = "5"
+# 上面的 0001-support-qt5-and-qt6-dual-build.patch 让上游 CMakeLists.txt
+# 在配置阶段自动探测实际的 Qt 主版本；这里只需要让 bitbake 选对
+# inherit 的 cmake 包装类和 Qt 组件包名即可（做法和 vitalmonitor recipe 一致）。
+QT_MAJOR_VERSION ?= "6"
 
-DEPENDS += "qtbase qtdeclarative qtdeclarative-native qtshadertools-native"
+# meta-qt6 提供 "qt6-cmake"，meta-qt5 提供 "cmake_qt5" —— 两个类名的构词顺序不同，
+# 不能简单地用 qt${QT_MAJOR_VERSION}-cmake 拼出来，所以用 bb.utils.contains 显式二选一。
+inherit ${@bb.utils.contains('QT_MAJOR_VERSION', '5', 'cmake_qt5', 'qt6-cmake', d)}
 
-# 运行时依赖
+# 两个版本都有的基础依赖
+DEPENDS += "qtbase qtdeclarative qtdeclarative-native"
 RDEPENDS:${PN} += " \
     qtbase \
     qtdeclarative-qmlplugins \
 "
+
+# 这个项目本身用到了 QtQuick.Controls 2（CMakeLists.txt 里显式 find_package/link 了 QuickControls2）
+# Qt6：着色器编译工具，QuickControls2 已经并入 qtdeclarative，不需要单独声明
+DEPENDS += "${@bb.utils.contains('QT_MAJOR_VERSION', '6', 'qtshadertools qtshadertools-native', '', d)}"
+
+# Qt5：QtQuick.Controls 2 是独立模块 qtquickcontrols2，到 Qt6 才被合并进 qtdeclarative 仓库
+DEPENDS += "${@bb.utils.contains('QT_MAJOR_VERSION', '5', 'qtquickcontrols2', '', d)}"
+RDEPENDS:${PN} += "${@bb.utils.contains('QT_MAJOR_VERSION', '5', 'qtquickcontrols2-qmlplugins', '', d)}"
 
 # 目标：1920x720 或 1280x480，可按板子屏幕改
 EXTRA_OECMAKE += "-DCMAKE_BUILD_TYPE=Release"

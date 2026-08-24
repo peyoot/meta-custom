@@ -1,4 +1,4 @@
-import QtQuick
+import QtQuick 2.15
 
 // 右侧大号数值块（HR / SpO2 / RESP ...）
 Rectangle {

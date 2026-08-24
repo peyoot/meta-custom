@@ -1,12 +1,15 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Window
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Window 2.15
 
 ApplicationWindow {
     id: app
     visible: true
     visibility: Window.FullScreen
-    // 不写死像素尺寸，直接跟随实际屏幕分辨率，避免与 FullScreen 冲突
+    // 实际跑在 Wayland/weston 上：合成器管理窗口尺寸，未设置 width/height 的窗口
+    // 初始拿到的是合成器给的默认尺寸，FullScreen 请求生效的时机不完全可控。
+    // 显式绑定屏幕尺寸能让 QML 内部布局始终按照确定的真实分辨率计算，不依赖
+    // 合成器自动铺满的时机。
     width: Screen.width
     height: Screen.height
     color: "#05070d"
@@ -19,7 +22,7 @@ ApplicationWindow {
         id: patientData
         property string name: "Zhang San"
         property int    age:  45
-        property string sex:  "男 Male"
+        property string sex:  "Male"
         property string bed:  "ICU-08"
         property string pid:  "P-100245"
     }

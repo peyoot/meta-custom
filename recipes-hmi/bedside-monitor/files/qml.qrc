@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/qml">
+        <file>Main.qml</file>
+        <file>VitalsPanel.qml</file>
+        <file>WaveformCanvas.qml</file>
+        <file>VitalsSimulator.js</file>
+    </qresource>
+</RCC>
