@@ -69,6 +69,7 @@ Item {
 
                 // 跳动的心脏
                 Item {
+                    id: heartWrap
                     Layout.alignment: Qt.AlignHCenter
                     width: page.heroHeartSize; height: page.heroHeartSize
                     opacity: 0
@@ -76,8 +77,11 @@ Item {
                     Component.onCompleted: introHeart.start()
                     ParallelAnimation {
                         id: introHeart
-                        NumberAnimation { target: parent; property: "opacity"; to: 1; duration: 700 }
-                        NumberAnimation { target: parent; property: "scale"; to: 1; duration: 700; easing.type: Easing.OutBack }
+                        // 必须显式写 target: heartWrap。若写 target: parent，QML 会沿作用域链
+                        // 解析成本 Item 的 parent（即外层 ColumnLayout），动画就打到了错误的对象上，
+                        // 心形自己的 opacity 会一直停在 0，永远不显示。
+                        NumberAnimation { target: heartWrap; property: "opacity"; to: 1; duration: 700 }
+                        NumberAnimation { target: heartWrap; property: "scale"; to: 1; duration: 700; easing.type: Easing.OutBack }
                     }
 
                     Canvas {
@@ -132,8 +136,10 @@ Item {
 
                 // 自绘 ECG 预览条
                 Waveform {
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.preferredWidth: parent.width * 0.9
+                    // 用 fillWidth 而不是 Layout.preferredWidth: parent.width * 0.9 ——
+                    // 后者让"子项的期望宽度"依赖"父布局的实际宽度"，而父布局宽度又要
+                    // 由子项期望宽度算出来，是典型的布局递归写法，容易触发重排递归。
+                    Layout.fillWidth: true
                     Layout.preferredHeight: page.heroWaveH
                     waveType: "ecg"; rate: 72; traceColor: "#34d399"
                     gain: 0.34
@@ -146,6 +152,7 @@ Item {
 
         // ================= 右：病人信息表单 =================
         Rectangle {
+            id: infoCard
             Layout.fillHeight: true
             // 直接算出确定的像素宽度，不用 fillWidth+maximumWidth 协商
             Layout.preferredWidth: Math.min(420, page.width * 0.42)
@@ -154,12 +161,19 @@ Item {
             border.color: "#1e293b"; border.width: 1
             opacity: 0
             clip: true
-            x: 40
+
+            // 滑入效果用 transform，不要直接动 x：这个 Rectangle 是 RowLayout 的子项，
+            // x 由布局引擎接管，动画去改 x 会和 anchors/布局互相打架、反复触发重排
+            // （在 Qt5 的 QtQuickLayouts 里可能递归爆栈，也就是之前的 Segfault）。
+            transform: Translate { id: cardSlide; x: 40 }
+
             Component.onCompleted: cardAnim.start()
             ParallelAnimation {
                 id: cardAnim
-                NumberAnimation { target: parent; property: "opacity"; to: 1; duration: 700 }
-                NumberAnimation { target: parent; property: "x"; from: 40; to: 0; duration: 700; easing.type: Easing.OutCubic }
+                // 同样必须显式写 target: infoCard —— 写 target: parent 会解析成外层 RowLayout，
+                // 卡片自己的 opacity 就永远停在 0，这正是之前卡片完全不显示的原因。
+                NumberAnimation { target: infoCard; property: "opacity"; to: 1; duration: 700 }
+                NumberAnimation { target: cardSlide; property: "x"; from: 40; to: 0; duration: 700; easing.type: Easing.OutCubic }
             }
 
             ColumnLayout {
