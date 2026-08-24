@@ -120,7 +120,7 @@ Item {
                 }
                 Text {
                     Layout.alignment: Qt.AlignHCenter
-                    text: "多参数生命体征监护系统 · Qt 6"
+                    text: "Multi-Parameter Vital Signs Monitor · Qt 6"
                     color: "#64748b"; font.pixelSize: page.heroSubSize
                     opacity: 0
                     Component.onCompleted: subAnim.start()
@@ -164,11 +164,11 @@ Item {
                 anchors.margins: page.cardMargin
                 spacing: page.cardSpacing
 
-                Text { text: "病人信息"; color: "#e2e8f0"; font.pixelSize: page.cardTitleSize; font.bold: true }
+                Text { text: "Patient Information"; color: "#e2e8f0"; font.pixelSize: page.cardTitleSize; font.bold: true }
                 Rectangle { Layout.fillWidth: true; height: 1; color: "#1e293b" }
 
                 // 姓名
-                Text { text: "姓名 NAME"; color: "#64748b"; font.pixelSize: page.labelSize }
+                Text { text: "NAME"; color: "#64748b"; font.pixelSize: page.labelSize }
                 DarkField {
                     id: nameField
                     Layout.fillWidth: true
@@ -181,7 +181,7 @@ Item {
                     Layout.fillWidth: true; spacing: Math.max(8, page.width * 0.02)
                     ColumnLayout {
                         Layout.fillWidth: true; spacing: 4
-                        Text { text: "年龄 AGE"; color: "#64748b"; font.pixelSize: page.labelSize }
+                        Text { text: "AGE"; color: "#64748b"; font.pixelSize: page.labelSize }
                         DarkField {
                             id: ageField; Layout.fillWidth: true
                             text: patient ? patient.age.toString() : "0"
@@ -191,18 +191,18 @@ Item {
                     }
                     ColumnLayout {
                         Layout.fillWidth: true; spacing: 4
-                        Text { text: "性别 SEX"; color: "#64748b"; font.pixelSize: page.labelSize }
+                        Text { text: "SEX"; color: "#64748b"; font.pixelSize: page.labelSize }
                         ComboBox {
                             id: sexBox
                             Layout.fillWidth: true
                             Layout.preferredHeight: page.fieldH
-                            model: ["男 Male", "女 Female", "其他 Other"]
+                            model: ["Male", "Female", "Other"]
                         }
                     }
                 }
 
                 // 床号 + ID
-                Text { text: "床号 BED"; color: "#64748b"; font.pixelSize: page.labelSize }
+                Text { text: "BED"; color: "#64748b"; font.pixelSize: page.labelSize }
                 DarkField {
                     id: bedField
                     Layout.fillWidth: true
@@ -210,7 +210,7 @@ Item {
                     fieldHeight: page.fieldH; fontSize: page.fieldFont
                 }
 
-                Text { text: "病历号 ID"; color: "#64748b"; font.pixelSize: page.labelSize }
+                Text { text: "ID"; color: "#64748b"; font.pixelSize: page.labelSize }
                 DarkField {
                     id: idField
                     Layout.fillWidth: true
@@ -242,7 +242,7 @@ Item {
                         }
                     }
                     contentItem: Text {
-                        text: "▶  开始监测"
+                        text: "▶  Start Monitoring"
                         color: "#052e26"; font.pixelSize: page.btnFont; font.bold: true
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter

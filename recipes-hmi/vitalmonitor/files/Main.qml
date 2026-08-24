@@ -20,7 +20,7 @@ ApplicationWindow {
         id: patientData
         property string name: "Zhang San"
         property int    age:  45
-        property string sex:  "男 Male"
+        property string sex:  "Male"
         property string bed:  "ICU-08"
         property string pid:  "P-100245"
     }
