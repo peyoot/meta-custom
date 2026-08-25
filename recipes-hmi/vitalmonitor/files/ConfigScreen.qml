@@ -13,6 +13,7 @@ import QtQuick.Controls 2.15
 Item {
     id: page
     property var patient
+    clip: true   // 保险：万一有元素算出去也在屏幕边缘硬裁掉，不再露出奇怪的形状
 
     signal startMonitoring()
 
@@ -46,10 +47,11 @@ Item {
         }
     }
 
-    // 呼吸式光晕（略微溢出屏幕做柔光感，但不宜太夸张）
+    // 呼吸式光晕。基础直径 0.85 倍屏幕短边，呼吸动画最大缩放到 1.05 倍，
+    // 峰值也只有 0.85*1.05 ≈ 0.8925 倍，任何时候都不会超出屏幕边界。
     Rectangle {
         anchors.centerIn: parent
-        width: Math.min(parent.width, parent.height) * 1.1
+        width: Math.min(parent.width, parent.height) * 0.85
         height: width
         radius: width / 2
         color: "#0f766e"
@@ -59,6 +61,15 @@ Item {
             NumberAnimation { from: 0.92; to: 1.05; duration: 3000; easing.type: Easing.InOutSine }
             NumberAnimation { from: 1.05; to: 0.92; duration: 3000; easing.type: Easing.InOutSine }
         }
+    }
+
+    // 点击空白区域让焦点离开输入框，从而让虚拟键盘自动收起
+    // （虚拟键盘没有自带的收起按钮时，这是最通用的兜底方式）。
+    // 放在最前面（z 顺序最底层），后面声明的按钮/输入框会盖在它上面，
+    // 只有点在真正空白的地方才会落到这个 MouseArea 上。
+    MouseArea {
+        anchors.fill: parent
+        onClicked: page.forceActiveFocus()
     }
 
     // ================= 左：英雄区（动画） =================
@@ -324,6 +335,9 @@ Item {
         color: "#e2e8f0"
         font.pixelSize: fontSize
         selectByMouse: true
+        // 获得焦点时全选已有内容：点进去就能直接输入替换掉默认值，
+        // 不用先一个个删除（避免虚拟键盘退格键在预填内容上表现不一致的问题）。
+        onActiveFocusChanged: if (activeFocus) selectAll()
         leftPadding: 12
         background: Rectangle {
             color: "#0d1424"
