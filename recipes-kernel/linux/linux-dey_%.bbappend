@@ -42,7 +42,7 @@ DT_FILES = " \
 "
 
 # 定义一个 Python 函数来执行安装命令
-python install_dts() {
+python do_install_dts() {
     import os
     import subprocess
 
@@ -60,7 +60,7 @@ python install_dts() {
 
 }
 
-addtask install_dts after do_patch before do_configure
+addtask do_install_dts after do_patch before do_configure
 
 # 为 ccmp25-dvk机器添加设备树和 overlay
 STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
