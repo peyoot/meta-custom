@@ -4,6 +4,7 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += " \
     file://0001-add-ch343-usb-serial-driver.patch \
+    file://cpufreq.cfg \
     file://fragment.cfg \
 "
 
