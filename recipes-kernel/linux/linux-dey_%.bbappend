@@ -4,6 +4,7 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += " \
             file://fragment.cfg \
+            file://cpufreq.cfg \
             file://ads7846-v6.11.c \
             "
 
@@ -20,11 +21,11 @@ SRCREV_ccmp25dt =  "${AUTOREV}"
 SRCREV_FORMAT = "default_ccmp25dt" 
 
 # 确保配置片段被应用
-do_configure:append() {
-    if [ -f ${WORKDIR}/fragment.cfg ]; then
-        cat ${WORKDIR}/fragment.cfg >> ${B}/.config
-    fi
-}
+#do_configure:append() {
+#    if [ -f ${WORKDIR}/fragment.cfg ]; then
+#        cat ${WORKDIR}/fragment.cfg >> ${B}/.config
+#    fi
+#}
 
 do_compile:prepend() {
     # 将YOCTO工作目录中的ads7846.c复制到内核源码的对应目录
