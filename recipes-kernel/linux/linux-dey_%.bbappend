@@ -5,6 +5,8 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 SRC_URI += " \
     file://0001-add-ch343-usb-serial-driver.patch \
     file://ch343.cfg \
+    file://cpufreq.cfg \
+    file://fragment.cfg \
 "
 
 # 添加自定义设备树仓库
@@ -20,11 +22,11 @@ SRCREV_ccmp25dt =  "${AUTOREV}"
 SRCREV_FORMAT = "default_ccmp25dt" 
 
 # 确保配置片段被应用
-do_configure:append() {
-    if [ -f ${WORKDIR}/ch343.cfg ]; then
-        cat ${WORKDIR}/ch343.cfg >> ${B}/.config
-    fi
-}
+#do_configure:append() {
+#    if [ -f ${WORKDIR}/ch343.cfg ]; then
+#        cat ${WORKDIR}/ch343.cfg >> ${B}/.config
+#    fi
+#}
 
 # 追加 do_patch 任务以安装自定义 DTS 文件
 do_patch:append() {
