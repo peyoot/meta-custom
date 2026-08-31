@@ -36,6 +36,9 @@ DT_FILES = " \
     ccmp25-viena.dts \
     ccmp25-viena-rt.dts \
     ccmp25-viena-hdmi.dts \
+    ccmp25-viena-hdmi-rmpd2.dts \
+    ccmp25-viena-ddisplay.dts \
+    ccmp25-viena-ddisplay-rmpd2.dts \
     ccmp25-viena-dualdisplay.dts \
     ccmp25-viena_ads7846.dtso \
     ccmp25-viena_hdmi.dtso \
@@ -68,6 +71,9 @@ STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
     ccmp25-viena.dtb \
     ccmp25-viena-rt.dtb \
     ccmp25-viena-hdmi.dtb \
+    ccmp25-viena-hdmi-rmpd2.dtb \
+    ccmp25-viena-ddisplay.dtb \
+    ccmp25-viena-ddisplay-rmpd2.dtb \
     ccmp25-viena-dualdisplay.dtb \
     ccmp25-viena_ads7846.dtbo \
     ccmp25-viena_hdmi.dtbo \
