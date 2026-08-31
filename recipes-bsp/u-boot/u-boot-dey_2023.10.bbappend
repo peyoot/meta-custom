@@ -19,13 +19,13 @@ SRC_URI:append:ccmp25 = " \
 "
 
 # 在编译前替换设备树文件和配置文件
-do_patch() {
-    # 从 Git 仓库中复制设备树文件到 U-Boot 源码目录
-    cp ${WORKDIR}/ccmp25_dt/uboot-dts/ccmp25-dvk.dts ${S}/arch/arm/dts/ccmp25-dvk.dts
-    # cp ${WORKDIR}/ccmp25_dt/uboot-dts/ccmp25-dvk-u-boot.dtsi ${S}/arch/arm/dts/ccmp25-dvk-u-boot.dtsi
+do_configure:prepend:ccmp25() {
+    # defconfig（configure 阶段读取）
+    cp ${WORKDIR}/ccmp25_dt/uboot/configs/ccmp25-dvk_defconfig  ${S}/configs/ccmp25-dvk_defconfig
 
-    # 从 Git 仓库中复制配置文件到 U-Boot 源码目录
-    cp ${WORKDIR}/ccmp25_dt/uboot/configs/ccmp25-dvk_defconfig ${S}/configs/ccmp25-dvk_defconfig
+    # U-Boot 设备树（compile 阶段使用；不需要替换 dtsi 就注释掉那一行）
+    cp ${WORKDIR}/ccmp25_dt/uboot-dts/ccmp25-dvk.dts           ${S}/arch/arm/dts/ccmp25-dvk.dts
+    cp ${WORKDIR}/ccmp25_dt/uboot-dts/ccmp25-dvk-u-boot.dtsi   ${S}/arch/arm/dts/ccmp25-dvk-u-boot.dtsi
 }
 
 do_compile:prepend:ccmp25() {
