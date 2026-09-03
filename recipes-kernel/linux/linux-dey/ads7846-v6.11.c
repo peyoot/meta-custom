@@ -29,6 +29,8 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/ads7846.h>
 #include <linux/regulator/consumer.h>
+#include <linux/atomic.h>
+#include <linux/workqueue.h>
 #include <linux/module.h>
 #include <asm/unaligned.h>
 
@@ -40,22 +42,32 @@
  * Support for ads7845 has only been stubbed in.
  * Support for Analog Devices AD7873 and AD7843 tested.
  *
- * IRQ handling needs a workaround because of a shortcoming in handling
- * edge triggered IRQs on some platforms like the OMAP1/2. These
- * platforms don't handle the ARM lazy IRQ disabling properly, thus we
- * have to maintain our own SW IRQ disabled status. This should be
- * removed as soon as the affected platform's IRQ handling is fixed.
+ * The pen IRQ is kept deliberately short: it only queues normal-priority
+ * work.  In particular, do not put the polling loop or a blocking SPI
+ * transfer in an IRQ thread.  On PREEMPT_RT an IRQ thread can have real-time
+ * scheduling priority and then interfere with the work that the system is
+ * actually trying to make deterministic.
  *
  * App note sbaa036 talks in more detail about accurate sampling...
  * that ought to help in situations like LCDs inducing noise (which
  * can also be helped by using synch signals) and more generally.
  * This driver tries to utilize the measures described in the app
- * note. The strength of filtering can be set in the board-* specific
- * files.
+ * note. The filtering policy below is intentionally fixed so that each
+ * touchscreen work item has a predictable maximum amount of local work.
  */
 
 #define TS_POLL_DELAY	1	/* ms delay before the first sample */
-#define TS_POLL_PERIOD	5	/* ms delay between samples */
+#define TS_POLL_PERIOD	8	/* ms delay between samples */
+
+/*
+ * Keep the sampling cost bounded.  Three samples are enough to reject one
+ * SPI/ADC outlier.  Unlike the legacy debounce algorithm, it never retries
+ * in a loop from the IRQ path.  Do not reject a whole batch merely because
+ * its three values differ: a resistive panel can be noisier near one edge,
+ * and the median is still a useful, bounded estimate in that case.
+ */
+#define ADS7846_SAMPLE_COUNT			3
+#define ADS7846_MAX_SETTLE_DELAY_USECS		300
 
 /* this driver doesn't aim at the peak continuous sample rate */
 #define	SAMPLE_BITS	(8 /*cmd*/ + 16 /*sample*/ + 2 /* before, after */)
@@ -80,12 +92,9 @@ struct ads7846_packet {
 	unsigned int count;
 	unsigned int count_skip;
 	unsigned int cmds;
-	unsigned int last_cmd_idx;
 	struct ads7846_buf_layout l[5];
 	struct ads7846_buf *rx;
 	struct ads7846_buf *tx;
-
-	struct ads7846_buf pwrdown_cmd;
 
 	bool ignore;
 	u16 x, y, z1, z2;
@@ -109,43 +118,28 @@ struct ads7846 {
 	bool			use_internal;
 
 	struct ads7846_packet	*packet;
+	struct workqueue_struct	*wq;
+	struct delayed_work	work;
+	/* Only one normal-priority polling chain may be active at a time. */
+	atomic_t			polling;
+	/* PENIRQ is masked while one contact is being sampled. */
+	atomic_t			irq_suppressed;
 
-	struct spi_transfer	xfer[18];
-	struct spi_message	msg[5];
-	int			msg_count;
-	wait_queue_head_t	wait;
-
+	struct spi_transfer	xfer;
+	struct spi_message	msg;
 	bool			pendown;
-
-	int			read_cnt;
-	int			read_rep;
-	int			last_read;
-
-	u16			debounce_max;
-	u16			debounce_tol;
-	u16			debounce_rep;
-
-	u16			penirq_recheck_delay_usecs;
-
 	struct touchscreen_properties core_prop;
 
 	struct mutex		lock;
-	bool			stopped;	/* P: lock */
+	/* Written under lock; read from the IRQ and work contexts. */
+	bool			stopped;
 	bool			disabled;	/* P: lock */
 	bool			suspended;	/* P: lock */
 
-	int			(*filter)(void *data, int data_idx, int *val);
-	void			*filter_data;
 	int			(*get_pendown_state)(void);
 	struct gpio_desc	*gpio_pendown;
 
 	void			(*wait_for_sync)(void);
-};
-
-enum ads7846_filter {
-	ADS7846_FILTER_OK,
-	ADS7846_FILTER_REPEAT,
-	ADS7846_FILTER_IGNORE,
 };
 
 /* leave chip selected when we're done, for quicker re-select? */
@@ -220,30 +214,98 @@ static int get_pendown_state(struct ads7846 *ts)
 	if (ts->get_pendown_state)
 		return ts->get_pendown_state();
 
-	return gpiod_get_value(ts->gpio_pendown);
+	return gpiod_get_value_cansleep(ts->gpio_pendown);
+}
+
+static bool ads7846_pendown(struct ads7846 *ts)
+{
+	int value = get_pendown_state(ts);
+
+	if (value < 0) {
+		dev_err_ratelimited(&ts->spi->dev,
+				    "failed to read PENIRQ GPIO: %d\n", value);
+		return false;
+	}
+
+	return value;
 }
 
 static void ads7846_report_pen_up(struct ads7846 *ts)
 {
 	struct input_dev *input = ts->input;
 
-	input_report_key(input, BTN_TOUCH, 0);
-	input_report_abs(input, ABS_PRESSURE, 0);
-	input_sync(input);
+	if (ts->pendown) {
+		input_report_key(input, BTN_TOUCH, 0);
+		input_report_abs(input, ABS_PRESSURE, 0);
+		input_sync(input);
+	}
 
 	ts->pendown = false;
 	dev_vdbg(&ts->spi->dev, "UP\n");
+}
+
+static bool ads7846_queue_work(struct ads7846 *ts, unsigned long delay)
+{
+	return queue_delayed_work(ts->wq, &ts->work, delay);
+}
+
+static void ads7846_unsuppress_irq(struct ads7846 *ts)
+{
+	if (atomic_xchg(&ts->irq_suppressed, 0))
+		enable_irq(ts->spi->irq);
+}
+
+static void ads7846_start_polling(struct ads7846 *ts, unsigned long delay)
+{
+	if (READ_ONCE(ts->stopped) ||
+	    atomic_cmpxchg(&ts->polling, 0, 1) != 0)
+		return;
+
+	/*
+	 * A resistive panel can generate several falling edges while the contact
+	 * settles.  Do the same masking that IRQF_ONESHOT provided to the old
+	 * threaded implementation, but keep only the small scheduling operation
+	 * in hardirq context.  This is especially important on PREEMPT_RT: the
+	 * atomic gate alone avoids duplicate work but does not avoid the IRQ load.
+	 */
+	atomic_set(&ts->irq_suppressed, 1);
+	disable_irq_nosync(ts->spi->irq);
+
+	if (!ads7846_queue_work(ts, delay)) {
+		atomic_set(&ts->polling, 0);
+		ads7846_unsuppress_irq(ts);
+	}
+}
+
+static void ads7846_stop_polling(struct ads7846 *ts)
+{
+	/*
+	 * Prevent ads7846_work() from rearming itself before waiting for the
+	 * currently running SPI transaction to complete.
+	 */
+	WRITE_ONCE(ts->stopped, true);
+	cancel_delayed_work_sync(&ts->work);
+	atomic_set(&ts->polling, 0);
+}
+
+static void ads7846_destroy_workqueue(void *data)
+{
+	struct ads7846 *ts = data;
+
+	ads7846_stop_polling(ts);
+	destroy_workqueue(ts->wq);
 }
 
 /* Must be called with ts->lock held */
 static void ads7846_stop(struct ads7846 *ts)
 {
 	if (!ts->disabled && !ts->suspended) {
-		/* Signal IRQ thread to stop polling and disable the handler. */
-		ts->stopped = true;
-		mb();
-		wake_up(&ts->wait);
+		/* Stop new work before the supply is disabled. */
+		WRITE_ONCE(ts->stopped, true);
+		/* Synchronize a hard IRQ before balancing its temporary mask. */
 		disable_irq(ts->spi->irq);
+		ads7846_stop_polling(ts);
+		ads7846_unsuppress_irq(ts);
 	}
 }
 
@@ -252,13 +314,16 @@ static void ads7846_restart(struct ads7846 *ts)
 {
 	if (!ts->disabled && !ts->suspended) {
 		/* Check if pen was released since last stop */
-		if (ts->pendown && !get_pendown_state(ts))
+		if (ts->pendown && !ads7846_pendown(ts))
 			ads7846_report_pen_up(ts);
 
-		/* Tell IRQ thread that it may poll the device. */
-		ts->stopped = false;
-		mb();
+		WRITE_ONCE(ts->stopped, false);
 		enable_irq(ts->spi->irq);
+
+		/* The pen may already be down; there may be no new edge. */
+		if (ads7846_pendown(ts))
+			ads7846_start_polling(ts,
+				msecs_to_jiffies(TS_POLL_DELAY));
 	}
 }
 
@@ -280,8 +345,10 @@ static void __ads7846_enable(struct ads7846 *ts)
 	int error;
 
 	error = regulator_enable(ts->reg);
-	if (error != 0)
+	if (error != 0) {
 		dev_err(&ts->spi->dev, "Failed to enable supply: %d\n", error);
+		return;
+	}
 
 	ads7846_restart(ts);
 }
@@ -364,7 +431,6 @@ static int ads7846_read12_ser(struct device *dev, unsigned command)
 
 	/* maybe turn on internal vREF, and let it settle */
 	if (ts->use_internal) {
-		dev_info(dev, "ads7846_read12_ser ts->use_internal      = %d\n", ts->use_internal);
 		req->ref_on = REF_ON;
 		req->xfer[0].tx_buf = &req->ref_on;
 		req->xfer[0].len = 1;
@@ -381,10 +447,10 @@ static int ads7846_read12_ser(struct device *dev, unsigned command)
 		/* Enable reference voltage */
 		command |= ADS_PD10_REF_ON;
 	}
-	dev_info(dev, "ads7846_read12_ser command0      = %d\n", command);
+
 	/* Enable ADC in every case */
 	command |= ADS_PD10_ADC_ON;
-	dev_info(dev, "ads7846_read12_ser command1      = %d\n", command);
+
 	/* take sample */
 	req->command = (u8) command;
 	req->xfer[2].tx_buf = &req->command;
@@ -642,53 +708,6 @@ static void null_wait_for_sync(void)
 {
 }
 
-static int ads7846_debounce_filter(void *ads, int data_idx, int *val)
-{
-	struct ads7846 *ts = ads;
-
-	if (!ts->read_cnt || (abs(ts->last_read - *val) > ts->debounce_tol)) {
-		/* Start over collecting consistent readings. */
-		ts->read_rep = 0;
-		/*
-		 * Repeat it, if this was the first read or the read
-		 * wasn't consistent enough.
-		 */
-		if (ts->read_cnt < ts->debounce_max) {
-			ts->last_read = *val;
-			ts->read_cnt++;
-			return ADS7846_FILTER_REPEAT;
-		} else {
-			/*
-			 * Maximum number of debouncing reached and still
-			 * not enough number of consistent readings. Abort
-			 * the whole sample, repeat it in the next sampling
-			 * period.
-			 */
-			ts->read_cnt = 0;
-			return ADS7846_FILTER_IGNORE;
-		}
-	} else {
-		if (++ts->read_rep > ts->debounce_rep) {
-			/*
-			 * Got a good reading for this coordinate,
-			 * go for the next one.
-			 */
-			ts->read_cnt = 0;
-			ts->read_rep = 0;
-			return ADS7846_FILTER_OK;
-		} else {
-			/* Read more values that are consistent. */
-			ts->read_cnt++;
-			return ADS7846_FILTER_REPEAT;
-		}
-	}
-}
-
-static int ads7846_no_filter(void *ads, int data_idx, int *val)
-{
-	return ADS7846_FILTER_OK;
-}
-
 static int ads7846_get_value(struct ads7846_buf *buf)
 {
 	int value;
@@ -697,6 +716,22 @@ static int ads7846_get_value(struct ads7846_buf *buf)
 
 	/* enforce ADC output is 12 bits width */
 	return (value >> 3) & 0xfff;
+}
+
+static u16 ads7846_median(struct ads7846_buf *buf)
+{
+	u16 a = ads7846_get_value(&buf[0]);
+	u16 b = ads7846_get_value(&buf[1]);
+	u16 c = ads7846_get_value(&buf[2]);
+
+	if (a > b)
+		swap(a, b);
+	if (b > c)
+		swap(b, c);
+	if (a > b)
+		swap(a, b);
+
+	return b;
 }
 
 static void ads7846_set_cmd_val(struct ads7846 *ts, enum ads7846_cmds cmd_idx,
@@ -761,65 +796,41 @@ static bool ads7846_cmd_need_settle(enum ads7846_cmds cmd_idx)
 	return false;
 }
 
-static int ads7846_filter(struct ads7846 *ts)
+static bool ads7846_filter(struct ads7846 *ts)
 {
 	struct ads7846_packet *packet = ts->packet;
-	int action;
-	int val;
-	unsigned int cmd_idx, b;
+	unsigned int cmd_idx;
 
 	packet->ignore = false;
-	for (cmd_idx = packet->last_cmd_idx; cmd_idx < packet->cmds - 1; cmd_idx++) {
+	for (cmd_idx = 0; cmd_idx < packet->cmds - 1; cmd_idx++) {
 		struct ads7846_buf_layout *l = &packet->l[cmd_idx];
+		struct ads7846_buf *buf = &packet->rx[l->offset + l->skip];
 
-		packet->last_cmd_idx = cmd_idx;
-
-		for (b = l->skip; b < l->count; b++) {
-			val = ads7846_get_value(&packet->rx[l->offset + b]);
-
-			action = ts->filter(ts->filter_data, cmd_idx, &val);
-			if (action == ADS7846_FILTER_REPEAT) {
-				if (b == l->count - 1)
-					return -EAGAIN;
-			} else if (action == ADS7846_FILTER_OK) {
-				ads7846_set_cmd_val(ts, cmd_idx, val);
-				break;
-			} else {
-				packet->ignore = true;
-				return 0;
-			}
-		}
+		ads7846_set_cmd_val(ts, cmd_idx,
+			ads7846_median(buf));
 	}
 
-	return 0;
+	return true;
 }
 
 static void ads7846_read_state(struct ads7846 *ts)
 {
 	struct ads7846_packet *packet = ts->packet;
-	struct spi_message *m;
-	int msg_idx = 0;
 	int error;
 
-	packet->last_cmd_idx = 0;
+	packet->ignore = false;
 
-	while (true) {
-		ts->wait_for_sync();
+	ts->wait_for_sync();
 
-		m = &ts->msg[msg_idx];
-		error = spi_sync(ts->spi, m);
-		if (error) {
-			dev_err_ratelimited(&ts->spi->dev, "spi_sync --> %d\n", error);
-			packet->ignore = true;
-			return;
-		}
+	error = spi_sync(ts->spi, &ts->msg);
 
-		error = ads7846_filter(ts);
-		if (error)
-			continue;
-
+	if (error) {
+		dev_err_ratelimited(&ts->spi->dev, "spi_sync --> %d\n", error);
+		packet->ignore = true;
 		return;
 	}
+
+	(void)ads7846_filter(ts);
 }
 
 static void ads7846_report_state(struct ads7846 *ts)
@@ -857,37 +868,31 @@ static void ads7846_report_state(struct ads7846 *ts)
 		Rt = 0;
 	}
 
-	/*
-	 * Sample found inconsistent by debouncing or pressure is beyond
-	 * the maximum. Don't report it to user space, repeat at least
-	 * once more the measurement
-	 */
-	if (packet->ignore || Rt > ts->pressure_max) {
-		dev_vdbg(&ts->spi->dev, "ignored %d pressure %d\n",
-			 packet->ignore, Rt);
+	/* A failed SPI batch carries no trustworthy coordinates. */
+	if (packet->ignore) {
+		dev_vdbg(&ts->spi->dev, "ignored sample\n");
 		return;
 	}
 
 	/*
-	 * Maybe check the pendown state before reporting. This discards
-	 * false readings when the pen is lifted.
+	 * PENIRQ, checked both before and after the SPI burst, is the touch
+	 * presence source.  Z1/Z2 are noisy for a light or short tap and must
+	 * not suppress BTN_TOUCH: doing so turns a valid GPIO-confirmed tap into
+	 * an occasional missed GUI click.  Keep the pressure axis in range while
+	 * still reporting the coordinate and button state.
 	 */
-	if (ts->penirq_recheck_delay_usecs) {
-		udelay(ts->penirq_recheck_delay_usecs);
-		if (!get_pendown_state(ts))
-			Rt = 0;
-	}
+	if (Rt > ts->pressure_max)
+		Rt = ts->pressure_max;
 
 	/*
-	 * NOTE: We can't rely on the pressure to determine the pen down
-	 * state, even this controller has a pressure sensor. The pressure
-	 * value can fluctuate for quite a while after lifting the pen and
-	 * in some cases may not even settle at the expected value.
+	 * Do not rely on pressure to determine pen down.  It can fluctuate for
+	 * quite a while after lifting the pen and may not settle during a short
+	 * tap; !PENIRQ is the only contact gate here.
 	 *
 	 * The only safe way to check for the pen up condition is in the
 	 * timer by reading the pen signal state (it's a GPIO _and_ IRQ).
 	 */
-	if (Rt) {
+	{
 		struct input_dev *input = ts->input;
 
 		if (!ts->pendown) {
@@ -908,33 +913,64 @@ static irqreturn_t ads7846_hard_irq(int irq, void *handle)
 {
 	struct ads7846 *ts = handle;
 
-	return get_pendown_state(ts) ? IRQ_WAKE_THREAD : IRQ_HANDLED;
-}
-
-
-static irqreturn_t ads7846_irq(int irq, void *handle)
-{
-	struct ads7846 *ts = handle;
-
-	/* Start with a small delay before checking pendown state */
-	msleep(TS_POLL_DELAY);
-
-	while (!ts->stopped && get_pendown_state(ts)) {
-
-		/* pen is down, continue with the measurement */
-		ads7846_read_state(ts);
-
-		if (!ts->stopped)
-			ads7846_report_state(ts);
-
-		wait_event_timeout(ts->wait, ts->stopped,
-				   msecs_to_jiffies(TS_POLL_PERIOD));
-	}
-
-	if (ts->pendown && !ts->stopped)
-		ads7846_report_pen_up(ts);
+	/*
+	 * This handler is deliberately hardirq-safe: no GPIO access and no SPI.
+	 * IRQF_NO_THREAD keeps it out of a PREEMPT_RT IRQ thread. It only starts
+	 * one normal-priority polling chain and returns immediately. The atomic
+	 * gate absorbs contact bounce without holding an IRQ-disable nesting level
+	 * across suspend, remove, or a regulator transition.
+	 */
+	ads7846_start_polling(ts, msecs_to_jiffies(TS_POLL_DELAY));
 
 	return IRQ_HANDLED;
+}
+
+static void ads7846_finish_polling(struct ads7846 *ts)
+{
+	atomic_set(&ts->polling, 0);
+	ads7846_unsuppress_irq(ts);
+
+	/*
+	 * Close the last-edge race: a new falling edge can arrive after the
+	 * worker decided the old contact was up while PENIRQ was masked.  Once
+	 * the line is unmasked and the gate is open, recheck its level so that a
+	 * new contact is not lost even if its falling edge was not latched.
+	 */
+	if (!READ_ONCE(ts->stopped) && ads7846_pendown(ts))
+		ads7846_start_polling(ts, msecs_to_jiffies(TS_POLL_DELAY));
+}
+
+static void ads7846_work(struct work_struct *work)
+{
+	struct ads7846 *ts = container_of(to_delayed_work(work),
+					 struct ads7846, work);
+
+	if (READ_ONCE(ts->stopped))
+		goto out;
+
+	if (!ads7846_pendown(ts))
+		goto pen_up;
+
+	/* One bounded batch per work item; never loop in an IRQ-derived context. */
+	ads7846_read_state(ts);
+
+	if (READ_ONCE(ts->stopped))
+		goto out;
+
+	/* Do not report a sample collected just as the pen was lifted. */
+	if (ads7846_pendown(ts))
+		ads7846_report_state(ts);
+
+	if (!READ_ONCE(ts->stopped) && ads7846_pendown(ts)) {
+		if (ads7846_queue_work(ts, msecs_to_jiffies(TS_POLL_PERIOD)))
+			return;
+	}
+
+pen_up:
+	if (!READ_ONCE(ts->stopped) && ts->pendown)
+		ads7846_report_pen_up(ts);
+out:
+	ads7846_finish_polling(ts);
 }
 
 static int ads7846_suspend(struct device *dev)
@@ -996,7 +1032,7 @@ static int ads7846_setup_pendown(struct spi_device *spi,
 	if (pdata->get_pendown_state) {
 		ts->get_pendown_state = pdata->get_pendown_state;
 	} else {
-		ts->gpio_pendown = gpiod_get(&spi->dev, "pendown", GPIOD_IN);
+		ts->gpio_pendown = devm_gpiod_get(&spi->dev, "pendown", GPIOD_IN);
 		if (IS_ERR(ts->gpio_pendown)) {
 			dev_err(&spi->dev, "failed to request pendown GPIO\n");
 			return PTR_ERR(ts->gpio_pendown);
@@ -1016,27 +1052,26 @@ static int ads7846_setup_pendown(struct spi_device *spi,
 static int ads7846_setup_spi_msg(struct ads7846 *ts,
 				  const struct ads7846_platform_data *pdata)
 {
-	struct spi_message *m = &ts->msg[0];
-	struct spi_transfer *x = ts->xfer;
+	struct spi_message *m = &ts->msg;
+	struct spi_transfer *x = &ts->xfer;
 	struct ads7846_packet *packet = ts->packet;
 	int vref = pdata->keep_vref_on;
 	unsigned int count, offset = 0;
 	unsigned int cmd_idx, b;
+	u16 settle_delay;
 	unsigned long time;
 	size_t size = 0;
 
 	/* time per bit */
 	time = NSEC_PER_SEC / ts->spi->max_speed_hz;
 
-	count = pdata->settle_delay_usecs * NSEC_PER_USEC / time;
+	/* Bound the burst length even if firmware carries a bad DT value. */
+	settle_delay = min_t(u16, pdata->settle_delay_usecs,
+				     ADS7846_MAX_SETTLE_DELAY_USECS);
+	count = settle_delay * NSEC_PER_USEC / time;
 	packet->count_skip = DIV_ROUND_UP(count, 24);
 
-	if (ts->debounce_max && ts->debounce_rep)
-		/* ads7846_debounce_filter() is making ts->debounce_rep + 2
-		 * reads. So we need to get all samples for normal case. */
-		packet->count = ts->debounce_rep + 2;
-	else
-		packet->count = 1;
+	packet->count = ADS7846_SAMPLE_COUNT;
 
 	if (ts->model == 7846)
 		packet->cmds = 5; /* x, y, z1, z2, pwdown */
@@ -1058,7 +1093,8 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 		l->offset = offset;
 		offset += max_count;
 		l->count = max_count;
-		l->skip = packet->count_skip;
+		l->skip = ads7846_cmd_need_settle(cmd_idx) ?
+			packet->count_skip : 0;
 		size += sizeof(*packet->tx) * max_count;
 	}
 
@@ -1080,7 +1116,6 @@ static int ads7846_setup_spi_msg(struct ads7846 *ts,
 		vref = 0;
 	}
 
-	ts->msg_count = 1;
 	spi_message_init(m);
 	m->context = ts;
 
@@ -1145,8 +1180,6 @@ static const struct ads7846_platform_data *ads7846_get_props(struct device *dev)
 
 	device_property_read_u16(dev, "ti,settle-delay-usec",
 				 &pdata->settle_delay_usecs);
-	device_property_read_u16(dev, "ti,penirq-recheck-delay-usecs",
-				 &pdata->penirq_recheck_delay_usecs);
 
 	device_property_read_u16(dev, "ti,x-plate-ohms", &pdata->x_plate_ohms);
 	device_property_read_u16(dev, "ti,y-plate-ohms", &pdata->y_plate_ohms);
@@ -1164,12 +1197,6 @@ static const struct ads7846_platform_data *ads7846_get_props(struct device *dev)
 	if (!device_property_read_u32(dev, "touchscreen-min-pressure", &value))
 		pdata->pressure_min = (u16) value;
 	device_property_read_u16(dev, "ti,pressure-max", &pdata->pressure_max);
-
-	device_property_read_u16(dev, "ti,debounce-max", &pdata->debounce_max);
-	if (!device_property_read_u32(dev, "touchscreen-average-samples", &value))
-		pdata->debounce_max = (u16) value;
-	device_property_read_u16(dev, "ti,debounce-tol", &pdata->debounce_tol);
-	device_property_read_u16(dev, "ti,debounce-rep", &pdata->debounce_rep);
 
 	device_property_read_u32(dev, "ti,pendown-gpio-debounce",
 			     &pdata->gpio_pendown_debounce);
@@ -1238,7 +1265,21 @@ static int ads7846_probe(struct spi_device *spi)
 	ts->input = input_dev;
 
 	mutex_init(&ts->lock);
-	init_waitqueue_head(&ts->wait);
+	/* Do not let an auto-enabled IRQ report before input registration. */
+	WRITE_ONCE(ts->stopped, true);
+	atomic_set(&ts->polling, 0);
+	atomic_set(&ts->irq_suppressed, 0);
+	INIT_DELAYED_WORK(&ts->work, ads7846_work);
+	ts->wq = alloc_workqueue(
+        "ads7846",
+        WQ_HIGHPRI,
+        1);
+	if (!ts->wq)
+		return -ENOMEM;
+
+	err = devm_add_action_or_reset(dev, ads7846_destroy_workqueue, ts);
+	if (err)
+		return err;
 
 	pdata = dev_get_platdata(dev);
 	if (!pdata) {
@@ -1252,25 +1293,9 @@ static int ads7846_probe(struct spi_device *spi)
 	ts->x_plate_ohms = pdata->x_plate_ohms ? : 400;
 	ts->vref_mv = pdata->vref_mv;
 
-	if (pdata->debounce_max) {
-		ts->debounce_max = pdata->debounce_max;
-		if (ts->debounce_max < 2)
-			ts->debounce_max = 2;
-		ts->debounce_tol = pdata->debounce_tol;
-		ts->debounce_rep = pdata->debounce_rep;
-		ts->filter = ads7846_debounce_filter;
-		ts->filter_data = ts;
-	} else {
-		ts->filter = ads7846_no_filter;
-	}
-
 	err = ads7846_setup_pendown(spi, ts, pdata);
 	if (err)
 		return err;
-
-	if (pdata->penirq_recheck_delay_usecs)
-		ts->penirq_recheck_delay_usecs =
-				pdata->penirq_recheck_delay_usecs;
 
 	ts->wait_for_sync = pdata->wait_for_sync ? : null_wait_for_sync;
 
@@ -1313,7 +1338,9 @@ static int ads7846_probe(struct spi_device *spi)
 		ts->core_prop.swap_x_y = true;
 	}
 
-	ads7846_setup_spi_msg(ts, pdata);
+	err = ads7846_setup_spi_msg(ts, pdata);
+	if (err)
+		return err;
 
 	ts->reg = devm_regulator_get(dev, "vcc");
 	if (IS_ERR(ts->reg)) {
@@ -1333,19 +1360,18 @@ static int ads7846_probe(struct spi_device *spi)
 		return err;
 
 	irq_flags = pdata->irq_flags ? : IRQF_TRIGGER_FALLING;
-	irq_flags |= IRQF_ONESHOT;
+	/* The handler is hardirq-safe and must not become an RT IRQ thread. */
+	irq_flags &= ~IRQF_ONESHOT;
+	irq_flags |= IRQF_NO_THREAD;
 
-	err = devm_request_threaded_irq(dev, spi->irq,
-					ads7846_hard_irq, ads7846_irq,
-					irq_flags, dev->driver->name, ts);
+	err = devm_request_irq(dev, spi->irq, ads7846_hard_irq, irq_flags,
+				       dev->driver->name, ts);
 	if (err && err != -EPROBE_DEFER && !pdata->irq_flags) {
 		dev_info(dev,
 			"trying pin change workaround on irq %d\n", spi->irq);
 		irq_flags |= IRQF_TRIGGER_RISING;
-		err = devm_request_threaded_irq(dev, spi->irq,
-						ads7846_hard_irq, ads7846_irq,
-						irq_flags, dev->driver->name,
-						ts);
+		err = devm_request_irq(dev, spi->irq, ads7846_hard_irq, irq_flags,
+					       dev->driver->name, ts);
 	}
 
 	if (err) {
@@ -1358,11 +1384,7 @@ static int ads7846_probe(struct spi_device *spi)
 		return err;
 
 	dev_info(dev, "touchscreen, irq %d\n", spi->irq);
-	// ===================== 在这里加 =====================
-	dev_info(dev, "--------------------------------------\n");
-	dev_info(dev, "use_internal = %d\n", ts->use_internal);
-	dev_info(dev, "vref_mv      = %d\n", ts->vref_mv);
-	dev_info(dev, "--------------------------------------\n");
+
 	/*
 	 * Take a first sample, leaving nPENIRQ active and vREF off; avoid
 	 * the touchscreen, in case it's not connected.
@@ -1381,6 +1403,12 @@ static int ads7846_probe(struct spi_device *spi)
 		return err;
 
 	device_init_wakeup(dev, pdata->wakeup);
+
+	/* request_irq() already enabled the line; only arm the polling state. */
+	WRITE_ONCE(ts->stopped, false);
+	if (ads7846_pendown(ts))
+		ads7846_start_polling(ts, msecs_to_jiffies(TS_POLL_DELAY));
+
 	/*
 	 * If device does not carry platform data we must have allocated it
 	 * when parsing DT data.
@@ -1395,7 +1423,9 @@ static void ads7846_remove(struct spi_device *spi)
 {
 	struct ads7846 *ts = spi_get_drvdata(spi);
 
+	mutex_lock(&ts->lock);
 	ads7846_stop(ts);
+	mutex_unlock(&ts->lock);
 }
 
 static struct spi_driver ads7846_driver = {
