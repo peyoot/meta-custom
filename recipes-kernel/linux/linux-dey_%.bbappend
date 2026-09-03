@@ -21,18 +21,6 @@ SRCREV_ccmp25dt =  "${AUTOREV}"
 # 定义 SRCREV_FORMAT 以分离主内核仓库和自定义仓库的版本号
 SRCREV_FORMAT = "default_ccmp25dt" 
 
-# 确保配置片段被应用
-#do_configure:append() {
-#    if [ -f ${WORKDIR}/ch343.cfg ]; then
-#        cat ${WORKDIR}/ch343.cfg >> ${B}/.config
-#    fi
-#}
-
-# 追加 do_patch 任务以安装自定义 DTS 文件
-do_patch:append() {
-    bb.build.exec_func('install_dts', d)
-}
-
 DT_FILES = " \
     ccmp25-plc.dts \
     ccmp25-plc_pwm_do1_2.dtso \
@@ -58,6 +46,9 @@ python install_dts() {
         subprocess.run(['install', '-D', '-m', '644', src, dest], check=True)
 
 }
+
+# 拷入自定义设备树
+addtask do_install_dts after do_patch before do_configure
 
 # 为 ccmp25-dvk机器添加设备树和 overlay
 STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
