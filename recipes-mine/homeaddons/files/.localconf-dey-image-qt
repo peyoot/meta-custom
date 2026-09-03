@@ -1,0 +1,29 @@
+DISTRO_FEATURES:append = " rt opengl "
+
+MACHINE_FEATURES:remove = " wifi bluetooth alsa"
+MACHINE_EXTRA_RDEPENDS:remove = " xbee-init "
+
+DISTRO_FEATURES:remove = " x11 cellular "
+DISTRO_FEATURES:remove = " cellular wifi bluetooth "
+
+CCCS_PKGS = ""
+
+IMAGE_INSTALL:append = " \
+    tslib tslib-calibrate tslib-tests \
+    homeaddons touch-calibration \
+    iproute2 i2c-tools \
+    qt5everywheredemo \
+    sqlite3 \
+    libdrm libdrm-tests \
+    evtest \
+    ttf-dejavu-sans \
+    dey-examples-rtc \
+"
+
+
+IMAGE_INSTALL:append = " \
+    util-linux-taskset \
+    util-linux-chrt \
+    util-linux-lscpu \
+    procps \
+"
