@@ -46,3 +46,11 @@ INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
 
 # BOARD_BOOTIMAGE_PARTITION_SIZE = "131072"
 # BOOTFS_LABEL = "BOOT"
+
+# Restrict para threads to reduce memory occupation 
+BB_NUMBER_THREADS = "2"
+PARALLEL_MAKE = "-j 2"
+
+SPDXLICENSEMAP[BSD] = "BSD-3-Clause"
+
+IMAGE_LINGUAS:remove = "c"

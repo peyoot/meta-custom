@@ -88,3 +88,11 @@ INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
 GLIBC_GENERATE_LOCALES = " en_GB.UTF-8 en_US.UTF-8"  
 
 QT_MAJOR_VERSION = "5"
+
+# Restrict para threads to reduce memory occupation 
+BB_NUMBER_THREADS = "2"
+PARALLEL_MAKE = "-j 2"
+
+SPDXLICENSEMAP[BSD] = "BSD-3-Clause"
+
+IMAGE_LINGUAS:remove = "c"
