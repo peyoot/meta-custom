@@ -56,6 +56,14 @@ fi
 # Back up environment variables
 setenv ORIG_overlays ${overlays}
 
+# --- CUSTOM: disable wireless overlays -------------------------------------
+# This firmware does not use WiFi/BT. Force the disable flags so the overlay
+# checks below are skipped regardless of the module's HWID capabilities.
+# Set temporarily (not saved), so the stock environment is left untouched.
+setenv disable_wifi 1
+setenv disable_bt 1
+# ---------------------------------------------------------------------------
+
 #
 # Determine overlays to apply depending on the hardware capabilities
 # described by the HWID, SOM version, and carrier board version.
@@ -74,6 +82,8 @@ if test "${module_has_wifi}" = "1" && test -z "${disable_wifi}"; then
 fi
 
 # --- CUSTOM: real-time kernel command line ---------------------------------
+# Dedicated real-time firmware: always append CPU isolation / RT tuning args.
+# Overwrite form (idempotent), so no backup/restore is needed.
 setenv extra_bootargs "isolcpus=1 nohz_full=1 rcu_nocbs=1 irqaffinity=0"
 # ---------------------------------------------------------------------------
 
