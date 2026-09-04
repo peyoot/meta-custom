@@ -32,7 +32,7 @@ DT_FILES = " \
 "
 
 # 定义一个 Python 函数来执行安装自定义设备树命令
-python install_dts() {
+python do_install_dts() {
     import os
     import subprocess
 
@@ -50,10 +50,8 @@ python install_dts() {
 
 }
 
-# 在配置编译前拷入自定义设备树
-python do_configure:prepend() {
-    bb.build.exec_func('install_dts', d)
-}
+# 在配置编译之前拷入自定义设备树
+addtask do_install_dts after do_patch before do_configure
 
 # 为 ccmp25-dvk机器添加设备树和 overlay
 STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
