@@ -27,16 +27,11 @@ SRCREV_FORMAT = "default_ccmp25dt"
 #    fi
 #}
 
-# 追加 do_patch 任务以安装自定义 DTS 文件
-do_patch:append() {
-    bb.build.exec_func('install_dts', d)
-}
-
 DT_FILES = " \
     ccmp25-dvk-test.dts \
 "
 
-# 定义一个 Python 函数来执行安装命令
+# 定义一个 Python 函数来执行安装自定义设备树命令
 python install_dts() {
     import os
     import subprocess
@@ -53,6 +48,11 @@ python install_dts() {
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         subprocess.run(['install', '-D', '-m', '644', src, dest], check=True)
 
+}
+
+# 在配置编译前拷入自定义设备树
+python do_configure:prepend() {
+    bb.build.exec_func('install_dts', d)
 }
 
 # 为 ccmp25-dvk机器添加设备树和 overlay
