@@ -1,5 +1,6 @@
 DISTRO_FEATURES:append = " rt"
 
+IMAGE_ROOTFS_MAXSIZE = "6291456"
 
 inherit ros_distro_${ROS_DISTRO}
 inherit ${ROS_DISTRO_TYPE}_image

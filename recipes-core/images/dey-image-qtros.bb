@@ -5,6 +5,10 @@
 #require dey-image-graphical.inc
 require recipes-core/images/dey-image-graphical.inc
 
+DISTRO_FEATURES:append = " rt"
+
+IMAGE_ROOTFS_MAXSIZE = "6291456"
+
 #
 # Create QT5/6 capable toolchain/SDK
 #
