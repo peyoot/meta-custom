@@ -29,7 +29,7 @@ DT_FILES = " \
 "
 
 # 定义一个 Python 函数来执行安装命令
-python install_dts() {
+python do_install_dts() {
     import os
     import subprocess
 
