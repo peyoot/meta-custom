@@ -1,0 +1,57 @@
+DISTRO_FEATURES:append = " rt opengl "
+
+DISTRO_FEATURES:remove = " x11 "
+
+
+IMAGE_INSTALL:append = " \
+    qtbase \
+    qtbase-plugins \
+    qtdeclarative \
+    qtdeclarative-qmlplugins \
+    qtsvg \
+    qtserialport \
+    qtwebsockets \
+    qtvirtualkeyboard \
+    qtvirtualkeyboard-qmlplugins \
+    qtbase-examples \
+    qtdeclarative-examples \
+    qtwayland \
+    sqlite3 \
+    libdrm libdrm-tests \
+    libgbm \
+    libegl \
+    libgles2 \
+    homeaddons \
+    gpio-demo-ctrl \
+    iproute2 i2c-tools \
+    evtest \
+    ttf-dejavu-sans \
+    dey-examples-rtc \
+"
+
+IMAGE_INSTALL:append = " \
+    util-linux-taskset \
+    util-linux-chrt \
+    util-linux-lscpu \
+    procps \
+"
+
+IMAGE_INSTALL:append = " hmi-dashboard vitalmonitor bedside-monitor "
+
+IMAGE_INSTALL:append = " packagegroup-dey-webkit weston weston-init "
+
+IMAGE_INSTALL:append:ccmp25 = " packagegroup-dey-x-linux-ai "
+
+# 添加DRM/KMS和硬件加速所必须的配置
+PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs gles2 fontconfig jpeg "
+PACKAGECONFIG:remove:pn-qtvirtualkeyboard = " lang-all lipi-toolkit"
+PACKAGECONFIG:append:pn-qtvirtualkeyboard = " lang-en_US"
+# 移除不再需要的配置，特别是明确禁用linuxfb和egl
+PACKAGECONFIG:remove:pn-qtbase = " glib x11 xcb linuxfb "
+
+
+# 移除调试特性
+IMAGE_FEATURES:remove = " eclipse-debug dbg-pkgs tools-debug tools-profile tools-testapps dev-pkgs package-management"
+
+# 全局抑制调试符号
+INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
