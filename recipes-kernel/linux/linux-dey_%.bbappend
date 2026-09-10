@@ -57,4 +57,8 @@ do_verify_kernel_config() {
     fi
 }
 
+# 如需执行这个任务而非单独检查，则用
+# addtask verify_kernel_config after do_configure before do_compile
 addtask verify_kernel_config after do_configure
+
+
