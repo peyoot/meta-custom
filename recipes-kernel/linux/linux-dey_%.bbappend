@@ -2,12 +2,21 @@
 
 FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
+# 添加自定义内核配置
 SRC_URI += " \
     file://0001-add-ch343-usb-serial-driver.patch \
-    file://cpufreq.cfg \
-    file://fragment.cfg \
-    file://ch343.cfg \
+    file://cpufreq.config \
+    file://fragment.config \
+    file://ch343.config \
 "
+
+MY_CONFIG_FRAGS = " \
+    ${WORKDIR}/fragment.config \
+    ${WORKDIR}/cpufreq.config \
+    ${WORKDIR}/ch343.config \
+"
+
+KERNEL_CONFIG_FRAGMENTS:append = " ${MY_CONFIG_FRAGS}"
 
 # 添加自定义设备树仓库
 SRC_URI:append = " \
@@ -49,6 +58,18 @@ python do_install_dts() {
 
 # 拷入自定义设备树
 addtask do_install_dts after do_patch before do_configure
+
+# 检查自定义的内核配置是否与RT冲突，默认只出警告，bbwarn 换成 bbfatal 即可阻止编译
+do_configure:prepend() {
+    if [ -n "${RT_CONFIG_FRAGS}" ]; then
+        cp ${B}/.config ${WORKDIR}/.config.conflict-check
+        if ! ${S}/scripts/kconfig/merge_config.sh -m -s -O ${WORKDIR} \
+                ${WORKDIR}/.config.conflict-check ${RT_CONFIG_FRAGS} ${MY_CONFIG_FRAGS} \
+                > ${WORKDIR}/kconfig-conflict-check.log 2>&1; then
+            bbwarn "内核 config fragment 冲突详情见: ${WORKDIR}/kconfig-conflict-check.log"
+        fi
+    fi
+}
 
 # 为 ccmp25-dvk机器添加设备树和 overlay
 STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
