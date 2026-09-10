@@ -20,10 +20,10 @@ SRCREV_FORMAT = "default_ccmp25dt"
 
 do_configure:prepend:ccmp25() {
     # defconfig（configure 阶段读取）
-    cp ${WORKDIR}/ccmp25_dt/uboot/configs/ccmp25-dvk_defconfig  ${S}/configs/ccmp25-dvk_defconfig
+    # cp ${WORKDIR}/ccmp25_dt/uboot/configs/ccmp25-dvk_defconfig  ${S}/configs/ccmp25-dvk_defconfig
 
     # U-Boot 设备树（compile 阶段使用；不需要替换 dtsi 就注释掉那一行）
-    cp ${WORKDIR}/ccmp25_dt/uboot-dts/ccmp25-dvk.dts           ${S}/arch/arm/dts/ccmp25-dvk.dts
-    cp ${WORKDIR}/ccmp25_dt/uboot-dts/ccmp25-dvk-u-boot.dtsi   ${S}/arch/arm/dts/ccmp25-dvk-u-boot.dtsi
+    # cp ${WORKDIR}/ccmp25_dt/uboot-dts/ccmp25-dvk.dts           ${S}/arch/arm/dts/ccmp25-dvk.dts
+    # cp ${WORKDIR}/ccmp25_dt/uboot-dts/ccmp25-dvk-u-boot.dtsi   ${S}/arch/arm/dts/ccmp25-dvk-u-boot.dtsi
 }
 
