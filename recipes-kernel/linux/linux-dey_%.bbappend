@@ -61,4 +61,8 @@ do_verify_kernel_config() {
 # addtask verify_kernel_config after do_configure before do_compile
 addtask verify_kernel_config after do_configure
 
+# 只想看差异，不用编译整个内核：
+# bitbake -c verify_kernel_config -f linux-dey
+# cat tmp/work/*/linux-dey/*/kconfig-diff-vs-official.txt
+
 
