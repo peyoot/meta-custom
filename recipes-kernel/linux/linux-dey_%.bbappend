@@ -2,11 +2,63 @@
 
 FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
+# 自定义内核配置片段，补丁及内核驱动
 SRC_URI += " \
-            file://fragment.cfg \
-            file://cpufreq.cfg \
+            file://fragment.config \
+            file://cpufreq.config \
             file://ads7846-v6.11.c \
             "
+
+SRC_URI += " \
+            file://fragment.config \
+            file://cpufreq.config \
+            "
+MY_CONFIG_FRAGS = " \
+    ${WORKDIR}/fragment.config \
+    ${WORKDIR}/cpufreq.config \
+"
+KERNEL_CONFIG_FRAGMENTS:append = " ${MY_CONFIG_FRAGS}"
+
+# 添加内核合并后的独立核查任务
+do_verify_kernel_config() {
+    OFFICIAL_DIR="${WORKDIR}/kconfig-official-check"
+    rm -rf "${OFFICIAL_DIR}"
+    mkdir -p "${OFFICIAL_DIR}"
+    # 第 0 层：跟正式流程用同一份 defconfig 起手（do_copy_defconfig 已经放好了）
+    cp -f "${WORKDIR}/defconfig" "${OFFICIAL_DIR}/.config"
+    oe_runmake -C ${S} O="${OFFICIAL_DIR}" olddefconfig
+
+    # 第一轮合并：Digi 自己的 .cfg（此时我们自己的三个文件因为是 .config 后缀，不会被扫进来）
+    if [ -n "${@' '.join(find_cfgs(d))}" ]; then
+        ${S}/scripts/kconfig/merge_config.sh -m -O "${OFFICIAL_DIR}" \
+            "${OFFICIAL_DIR}/.config" ${@" ".join(find_cfgs(d))}
+    fi
+
+    # 第二轮合并：只用官方 RT_CONFIG_FRAGS，不掺我们自己的 MY_CONFIG_FRAGS
+    if [ -n "${RT_CONFIG_FRAGS}" ]; then
+        ${S}/scripts/kconfig/merge_config.sh -m -O "${OFFICIAL_DIR}" \
+            "${OFFICIAL_DIR}/.config" ${RT_CONFIG_FRAGS}
+    fi
+    
+    # 解析依赖级联，得到"纯官方"最终态
+    oe_runmake -C ${S} O="${OFFICIAL_DIR}" olddefconfig
+
+    # 真正的 .config（已含自定义 fragment）同样解析一次依赖，用副本，不碰 ${B}
+    MINE_DIR="${WORKDIR}/kconfig-mine-check"
+    rm -rf "${MINE_DIR}"
+    mkdir -p "${MINE_DIR}"
+    cp ${B}/.config "${MINE_DIR}/.config"
+    oe_runmake -C ${S} O="${MINE_DIR}" olddefconfig
+
+    diff -u "${OFFICIAL_DIR}/.config" "${MINE_DIR}/.config" \
+        > ${WORKDIR}/kconfig-diff-vs-official.txt || true
+
+    if [ -s ${WORKDIR}/kconfig-diff-vs-official.txt ]; then
+        bbnote "自定义内核配置相对 Digi 官方基线的差异（预期内，仅供核对生效情况）: ${WORKDIR}/kconfig-diff-vs-official.txt"
+    else
+        bbnote "自定义 fragment 未产生任何实际差异，请检查是否真的生效"
+    fi
+}
 
 # 添加自定义设备树仓库
 SRC_URI:append = " \
@@ -20,18 +72,6 @@ SRCREV_ccmp25dt =  "${AUTOREV}"
 # 定义 SRCREV_FORMAT 以分离主内核仓库和自定义仓库的版本号
 SRCREV_FORMAT = "default_ccmp25dt" 
 
-# 确保配置片段被应用
-#do_configure:append() {
-#    if [ -f ${WORKDIR}/fragment.cfg ]; then
-#        cat ${WORKDIR}/fragment.cfg >> ${B}/.config
-#    fi
-#}
-
-do_compile:prepend() {
-    # 将YOCTO工作目录中的ads7846.c复制到内核源码的对应目录
-    cp ${WORKDIR}/ads7846-v6.11.c ${S}/drivers/input/touchscreen/ads7846.c
-}
-
 DT_FILES = " \
     ccmp25-viena.dts \
     ccmp25-viena-hdmi.dts \
@@ -41,7 +81,7 @@ DT_FILES = " \
     ccmp25-viena_dualdisplay.dtso \
 "
 
-# 定义一个 Python 函数来执行安装命令
+# 定义一个 Python 函数来执行设备树安装
 python do_install_dts() {
     import os
     import subprocess
@@ -62,6 +102,8 @@ python do_install_dts() {
 
 addtask do_install_dts after do_patch before do_configure
 
+addtask verify_kernel_config after do_configure
+
 # 为 ccmp25-dvk机器添加设备树和 overlay
 STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
     ccmp25-viena.dtb \
@@ -71,6 +113,11 @@ STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
     ccmp25-viena_hdmi.dtbo \
     ccmp25-viena_dualdisplay.dtbo \
 "
+
+do_compile:prepend() {
+    # 将YOCTO工作目录中的ads7846.c复制到内核源码的对应目录
+    cp ${WORKDIR}/ads7846-v6.11.c ${S}/drivers/input/touchscreen/ads7846.c
+}
 
 do_install:prepend:ccmp2() {
 #    echo "KERNEL_DEVICETREE: ${KERNEL_DEVICETREE}"  and check log when perform bitbake -D -v linux-dey
