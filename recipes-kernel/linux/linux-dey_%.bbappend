@@ -4,10 +4,17 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += " \
     file://0001-add-ch343-usb-serial-driver.patch \
-    file://cpufreq.cfg \
-    file://fragment.cfg \
-    file://ch343.cfg \
+    file://fragment.config \
+    file://cpufreq.config \
+    file://ch343.config \
 "
+MY_CONFIG_FRAGS = " \
+    ${WORKDIR}/fragment.config \
+    ${WORKDIR}/cpufreq.config \
+    ${WORKDIR}/ch343.config \
+"
+# 定义内核配置片段用 .config 后缀走"第二轮合并"（KERNEL_CONFIG_FRAGMENTS），从而排在 Digi 官方 RT 基线之后生效。
+KERNEL_CONFIG_FRAGMENTS:append = " ${MY_CONFIG_FRAGS}"
 
 # 添加自定义设备树仓库
 SRC_URI:append = " \
@@ -28,6 +35,50 @@ DT_FILES = " \
     ccmp25-plc_fix_eth2_100m.dtso \
 "
 
+# 校验任务：对比"纯官方基线"（defconfig + Digi 自己的 .cfg + Digi 官方 RT_CONFIG_FRAGS）
+# 和"最终实际生效的 .config"（含我们自己的 fragment）之间的差异。确认自定义选项有没有真正生效、以及有没有
+# 意外带崩别的依赖项（比如关掉 CFG80211 顺带影响 MAC80211 这种级联效果）。
+# ---------------------------------------------------------------------------
+do_verify_kernel_config() {
+    OFFICIAL_DIR="${WORKDIR}/kconfig-official-check"
+    rm -rf "${OFFICIAL_DIR}"
+    mkdir -p "${OFFICIAL_DIR}"
+    # 第 0 层：跟正式流程用同一份 defconfig 起手（do_copy_defconfig 已经放好了）
+    cp -f "${WORKDIR}/defconfig" "${OFFICIAL_DIR}/.config"
+    oe_runmake -C ${S} O="${OFFICIAL_DIR}" olddefconfig
+
+    # 第一轮合并：Digi 自己的 .cfg（此时我们自己的三个文件因为是 .config 后缀，不会被扫进来）
+    if [ -n "${@' '.join(find_cfgs(d))}" ]; then
+        ${S}/scripts/kconfig/merge_config.sh -m -O "${OFFICIAL_DIR}" \
+            "${OFFICIAL_DIR}/.config" ${@" ".join(find_cfgs(d))}
+    fi
+
+    # 第二轮合并：只用官方 RT_CONFIG_FRAGS，不掺我们自己的 MY_CONFIG_FRAGS
+    if [ -n "${RT_CONFIG_FRAGS}" ]; then
+        ${S}/scripts/kconfig/merge_config.sh -m -O "${OFFICIAL_DIR}" \
+            "${OFFICIAL_DIR}/.config" ${RT_CONFIG_FRAGS}
+    fi
+    
+    # 解析依赖级联，得到"纯官方"最终态
+    oe_runmake -C ${S} O="${OFFICIAL_DIR}" olddefconfig
+
+    # 真正的 .config（已含自定义 fragment）同样解析一次依赖，用副本，不碰 ${B}
+    MINE_DIR="${WORKDIR}/kconfig-mine-check"
+    rm -rf "${MINE_DIR}"
+    mkdir -p "${MINE_DIR}"
+    cp ${B}/.config "${MINE_DIR}/.config"
+    oe_runmake -C ${S} O="${MINE_DIR}" olddefconfig
+
+    diff -u "${OFFICIAL_DIR}/.config" "${MINE_DIR}/.config" \
+        > ${WORKDIR}/kconfig-diff-vs-official.txt || true
+
+    if [ -s ${WORKDIR}/kconfig-diff-vs-official.txt ]; then
+        bbnote "自定义内核配置相对 Digi 官方基线的差异（预期内，仅供核对生效情况）: ${WORKDIR}/kconfig-diff-vs-official.txt"
+    else
+        bbnote "自定义 fragment 未产生任何实际差异，请检查是否真的生效"
+    fi
+}
+
 # 定义一个 Python 函数来执行安装命令
 python do_install_dts() {
     import os
@@ -46,6 +97,13 @@ python do_install_dts() {
         subprocess.run(['install', '-D', '-m', '644', src, dest], check=True)
 
 }
+
+# 添加内核设备树合并后单独检查任务，不作为标准任务
+addtask verify_kernel_config after do_configure
+
+# 只想看差异时，用
+# bitbake -c verify_kernel_config -f linux-dey
+# cat tmp/work/*/linux-dey/*/kconfig-diff-vs-official.txt
 
 # 拷入自定义设备树
 addtask do_install_dts after do_patch before do_configure
