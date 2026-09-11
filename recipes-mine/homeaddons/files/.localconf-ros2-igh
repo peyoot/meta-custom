@@ -1,0 +1,103 @@
+DISTRO_FEATURES:append = " rt opengl "                                                                                                                                                                [62/1868]
+                                                                                                                                                                                                               
+#MACHINE_EXTRA_RRECOMMENDS:remove = " firmware-murata-infineon firmware-murata-infineon-mfgtest "                                                                                                              
+#MACHINE_EXTRA_RDEPENDS:remove = " xbee-init "                                                                                                                                                                 
+                                                                                                                                                                                                               
+DISTRO_FEATURES:remove = " x11 cellular "                                                                                                                                                                      
+#DISTRO_FEATURES:remove = " cellular wifi bluetooth "                                                                                                                                                          
+#DISTRO_FEATURES:remove = " pulseaudio gstreamer "                                                                                                                                                             
+                                                                                                                                                                                                               
+# 不让 gstreamer1.0-plugins-good 编译 pulseaudio 插件                                                                                                                                                          
+# PACKAGECONFIG:remove:pn-gstreamer1.0-plugins-good = " pulseaudio "                                                                                                                                           
+                                                                                                                                                                                                               
+                                                                                                                                                                                                               
+# CCCS_PKGS = ""                                                                                                                                                                                               
+VIRTUAL-RUNTIME_ftp-server = ""                                                                                                                                                                                
+VIRTUAL-RUNTIME_http-server = ""                                                                                                                                                                               
+                                                                                                                                                                                                               
+IMAGE_INSTALL:append = " \                                                                                                                                                                                     
+    qtbase \                                                                                                                                                                                                   
+    qtbase-plugins \                                                                                                                                                                                           
+    qtdeclarative \                                                                                                                                                                                            
+    qtdeclarative-qmlplugins \                                                                                                                                                                                 
+    qtsvg \                                                                                                                                                                                                    
+    qtserialport \                                                                                                                                                                                             
+    qtwebsockets \                                                                                                                                                                                             
+    qtvirtualkeyboard \                                                                                                                                                                                        
+    qtvirtualkeyboard-qmlplugins \                                                                                                                                                                             
+    qtbase-examples \                                                                                                                                                                                          
+    qtdeclarative-examples \                                                                                                                                                                                   
+    qtwayland \                                                                                                                                                                                                
+    homeaddons \                                                                                                                                                                                               
+    iproute2 i2c-tools \
+    ttf-dejavu-sans \
+    dey-examples-rtc \
+"
+
+
+
+IMAGE_INSTALL:append = " \
+    ros-core \
+    packagegroup-ros2-demos \
+"
+IMAGE_INSTALL:append = " \                                                                                                                                                                            [19/1868]
+    moveit-core \
+    moveit-ros-planning \
+    moveit-ros-planning-interface \
+    moveit-ros-move-group \
+    moveit-ros-occupancy-map-monitor \
+    moveit-kinematics \
+    moveit-planners-ompl \
+    moveit-simple-controller-manager \
+    moveit-ros-control-interface \
+    moveit-servo \
+    moveit-configs-utils \
+ "
+
+IMAGE_INSTALL:append = " \
+    util-linux-taskset \
+    util-linux-chrt \
+    util-linux-lscpu \
+    procps \
+"
+IMAGE_INSTALL:append = " igh-ethercat "
+
+
+IMAGE_INSTALL:append = " hmi-dashboard vitalmonitor bedside-monitor gpio-demo-ctrl screen "
+
+IMAGE_INSTALL:append = " packagegroup-dey-webkit weston weston-init "
+
+IMAGE_INSTALL:append:ccmp25 = " packagegroup-dey-x-linux-ai "
+
+# 添加DRM/KMS和硬件加速所必须的配置
+PACKAGECONFIG:append:pn-qtbase = " kms gbm eglfs gles2 fontconfig jpeg "
+PACKAGECONFIG:remove:pn-qtvirtualkeyboard = " lang-all lipi-toolkit"
+PACKAGECONFIG:append:pn-qtvirtualkeyboard = " lang-en_US"
+# 移除不再需要的配置，特别是明确禁用linuxfb和egl
+PACKAGECONFIG:remove:pn-qtbase = " glib x11 xcb linuxfb "
+
+PACKAGECONFIG:remove:pn-networkmanager = "modemmanager ppp"
+RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager "
+PACKAGECONFIG:remove:pn-networkmanager = "modemmanager ppp"
+RDEPENDS:packagegroup-dey-network:remove = " ppp modemmanager "
+
+GLIBC_GENERATE_LOCALES = " en_GB.UTF-8 en_US.UTF-8" 
+
+QT_MAJOR_VERSION = "5"
+
+# 禁用 swupdate 服务的自动启动（同时会禁用其 socket，因为它们属于同一配方）
+SYSTEMD_AUTO_ENABLE:pn-swupdate = "disable"
+
+# 移除调试特性
+IMAGE_FEATURES:remove = " eclipse-debug dbg-pkgs tools-debug tools-profile tools-testapps dev-pkgs package-management"
+
+# 全局抑制调试符号
+INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
+
+# Restrict para threads to reduce memory occupation 
+BB_NUMBER_THREADS = "2"
+PARALLEL_MAKE = "-j 2"
+
+SPDXLICENSEMAP[BSD] = "BSD-3-Clause"
+
+IMAGE_LINGUAS:remove = "c"
