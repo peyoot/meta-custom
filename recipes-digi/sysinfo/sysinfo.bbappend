@@ -5,6 +5,15 @@
 
 FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
+# Helper that finds the build host's IPv4 address; only used at build time,
+# it is not installed in the image.
+SRC_URI += "file://get-build-ip.py"
+
+# Optional: force the network interface used for the "Build host" IP
+# (e.g. CUSTOM_BUILD_IF = "ens160" in local.conf). Empty = auto-detect the first
+# wired physical NIC, falling back to the default-route interface.
+CUSTOM_BUILD_IF ?= ""
+
 # The values below come from the build host's filesystem and are not part of the
 # task signature, so force do_install to run every time. Remove this line if you
 # prefer to run "bitbake -c cleansstate sysinfo" manually after changing
@@ -48,8 +57,9 @@ do_install:append() {
     # build machine hostname and primary IPv4 address
     buildhost="$(hostname 2>/dev/null)"
     [ -z "$buildhost" ] && buildhost="unknown"
-    # source address of the default route (no packet is sent), fall back to hostname -I
-    buildip="$(python3 -c 'import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.connect(("10.255.255.255", 1)); print(s.getsockname()[0])' 2>/dev/null || true)"
+    # IPv4 of the first wired physical NIC (see get-build-ip.py for the rules)
+    buildip="$(python3 ${WORKDIR}/get-build-ip.py "${CUSTOM_BUILD_IF}" 2>/dev/null || true)"
+    # last resort: first address reported by hostname -I
     [ -z "$buildip" ] && buildip="$(hostname -I 2>/dev/null | awk '{print $1}')"
     [ -z "$buildip" ] && buildip="unknown"
 
