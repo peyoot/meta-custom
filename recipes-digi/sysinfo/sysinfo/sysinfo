@@ -653,11 +653,30 @@ print_qr || exit $?
 	echo "|| DEY version | ${DISTRO}-${DEY_VERSION}-$(cat /etc/version)"
 	echo "|| Kernel | $(uname -a)"
 	echo "|| meta-digi | $(sed -ne '/^meta-digi-dey/s,.*= \(.*\)$,\1,g;T;p' /etc/buildinfo)"
-	echo "|| meta-custom branch | @CUSTOM_BRANCH@"
-	echo "|| Manifest XML | @CUSTOM_MANIFEST_XML@"
-	echo "|| DEY project | @CUSTOM_PROJECT_NAME@"
 	[ -n "${MCA_VERSION}" ] && echo "|| MCA | ${MCA_VERSION}"
 	[ -n "${IOEXP_VERSION}" ] && echo "|| I/O Expander | ${IOEXP_VERSION}"
+
+	echo ""
+	echo "-------------------------------------"
+	echo "DEY AIO Additional Information:"
+	echo "-------------------------------------"
+	echo "|| meta-custom commit | $(sed -ne '/^meta-custom/s,.*= \(.*\)$,\1,g;T;p' /etc/buildinfo)"
+	echo "|| meta-custom branch | @CUSTOM_BRANCH@"
+	echo "|| DEYAIO Manifest XML | @CUSTOM_MANIFEST_XML@"
+	echo "|| DEY Workspace Project | @CUSTOM_PROJECT_NAME@"
+
+	echo ""
+	echo "-------------------------------------"
+	echo "Build host | @CUSTOM_BUILD_HOST@ (@CUSTOM_BUILD_IP@)"
+	echo "-------------------------------------"
+	echo "Build conf/local.conf (partial, lines after the ACCEPT_EULA entry):"
+
+	echo ""
+	if [ -s /etc/sysinfo-local.conf.txt ]; then
+		cat /etc/sysinfo-local.conf.txt
+	else
+		echo "(not available)"
+	fi
 	printf "\n\n"
 ) | tee "${REPORT_PATH}.txt"
 

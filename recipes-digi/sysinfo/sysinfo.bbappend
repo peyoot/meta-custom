@@ -11,6 +11,10 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 # manifest/project.
 do_install[nostamp] = "1"
 
+# local.conf content is reported starting from the line AFTER the first line
+# containing this marker.
+CUSTOM_EULA_MARKER ?= "ACCEPT_EULA_${MACHINE}"
+
 do_install:append() {
     topdir="${TOPDIR}"
 
@@ -41,9 +45,32 @@ do_install:append() {
         [ -z "$branch" ] && branch="unknown"
     fi
 
+    # build machine hostname and primary IPv4 address
+    buildhost="$(hostname 2>/dev/null)"
+    [ -z "$buildhost" ] && buildhost="unknown"
+    # source address of the default route (no packet is sent), fall back to hostname -I
+    buildip="$(python3 -c 'import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.connect(("10.255.255.255", 1)); print(s.getsockname()[0])' 2>/dev/null || true)"
+    [ -z "$buildip" ] && buildip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+    [ -z "$buildip" ] && buildip="unknown"
+
+    # tail of conf/local.conf: everything after the line containing the EULA marker
+    install -d ${D}${sysconfdir}
+    localconf_out="${D}${sysconfdir}/sysinfo-local.conf.txt"
+    : > "$localconf_out"
+    if [ -f "$topdir/conf/local.conf" ]; then
+        awk -v m="${CUSTOM_EULA_MARKER}" 'f{print; next} index($0,m){f=1}' \
+            "$topdir/conf/local.conf" > "$localconf_out"
+        # Optional: mask likely secrets before they end up in the report, e.g.
+        # sed -i -E 's/^([^#]*(PASSWORD|PASSWD|SECRET|TOKEN|CREDENTIAL)[^=]*=).*/\1 "<redacted>"/' "$localconf_out"
+    fi
+
     # replace placeholders in the installed script (bindir or sbindir)
     find ${D} -type f -name sysinfo -exec sed -i \
         -e "s|@CUSTOM_BRANCH@|$branch|" \
         -e "s|@CUSTOM_MANIFEST_XML@|$xml|" \
-        -e "s|@CUSTOM_PROJECT_NAME@|$proj|" {} +
+        -e "s|@CUSTOM_PROJECT_NAME@|$proj|" \
+        -e "s|@CUSTOM_BUILD_HOST@|$buildhost|" \
+        -e "s|@CUSTOM_BUILD_IP@|$buildip|" {} +
 }
+
+FILES:${PN} += "${sysconfdir}/sysinfo-local.conf.txt"
