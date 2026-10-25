@@ -667,10 +667,10 @@ print_qr || exit $?
 
 	echo ""
 	echo "-------------------------------------"
-	echo "Build host | @CUSTOM_BUILD_HOST@ (@CUSTOM_BUILD_IP@)"
-	echo "-------------------------------------"
 	echo "Build conf/local.conf (partial, lines after the ACCEPT_EULA entry):"
-
+	echo "-------------------------------------"
+	echo "|| Build host | @CUSTOM_BUILD_HOST@ (@CUSTOM_BUILD_IP@)"
+	echo "|| Build date | @CUSTOM_BUILD_DATE@"
 	echo ""
 	if [ -s /etc/sysinfo-local.conf.txt ]; then
 		cat /etc/sysinfo-local.conf.txt

@@ -63,6 +63,9 @@ do_install:append() {
     [ -z "$buildip" ] && buildip="$(hostname -I 2>/dev/null | awk '{print $1}')"
     [ -z "$buildip" ] && buildip="unknown"
 
+    # build date (build host's local time, with UTC offset)
+    builddate="$(date "+%Y-%m-%d %H:%M:%S %z")"
+
     # tail of conf/local.conf: everything after the line containing the EULA marker
     install -d ${D}${sysconfdir}
     localconf_out="${D}${sysconfdir}/sysinfo-local.conf.txt"
@@ -80,7 +83,8 @@ do_install:append() {
         -e "s|@CUSTOM_MANIFEST_XML@|$xml|" \
         -e "s|@CUSTOM_PROJECT_NAME@|$proj|" \
         -e "s|@CUSTOM_BUILD_HOST@|$buildhost|" \
-        -e "s|@CUSTOM_BUILD_IP@|$buildip|" {} +
+        -e "s|@CUSTOM_BUILD_IP@|$buildip|" \
+        -e "s|@CUSTOM_BUILD_DATE@|$builddate|" {} +
 }
 
 FILES:${PN} += "${sysconfdir}/sysinfo-local.conf.txt"
