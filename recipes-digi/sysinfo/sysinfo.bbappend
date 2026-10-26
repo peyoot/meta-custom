@@ -20,6 +20,12 @@ CUSTOM_BUILD_IF ?= ""
 # manifest/project.
 do_install[nostamp] = "1"
 
+# BitBake runs tasks in an isolated network namespace (only "lo" exists), so the
+# build host's IP address cannot be read unless the task is allowed network
+# access. This is only used to read the local interface address; nothing is
+# downloaded or sent.
+do_install[network] = "1"
+
 # local.conf content is reported starting from the line AFTER the first line
 # containing this marker.
 CUSTOM_EULA_MARKER ?= "ACCEPT_EULA_${MACHINE}"
