@@ -66,7 +66,7 @@ addtask verify_kernel_config after do_configure
 
 # 添加自定义设备树仓库
 SRC_URI:append = " \
-    git://github.com/peyoot/ccmp25_dt;branch=ccmp25-scarthgap;protocol=https;destsuffix=ccmp25_dt;name=ccmp25dt \
+    git://github.com/peyoot/ccmp25_dt;branch=scarthgap-ccmp25dvk;protocol=https;destsuffix=ccmp25_dt;name=ccmp25dt \
 "
 
 # 指定自定义设备树仓库的提交哈希
@@ -105,7 +105,7 @@ addtask verify_kernel_config after do_configure
 
 # 为 ccmp25-dvk机器添加设备树和 overlay
 STM32MP_KERNEL_DEVICETREE:ccmp25-dvk += " \
-    ccmp25-viena-test.dtb \
+    ccmp25-dvk-test.dtb \
 "
 
 do_compile:prepend() {
