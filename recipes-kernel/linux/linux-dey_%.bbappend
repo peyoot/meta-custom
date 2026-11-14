@@ -7,7 +7,7 @@ SRC_URI += " \
             file://fragment.config \
             "
 MY_CONFIG_FRAGS = " \
-    ${WORKDIR}/fragment.config \[]
+    ${WORKDIR}/fragment.config \    
 "
 KERNEL_CONFIG_FRAGMENTS:append = " ${MY_CONFIG_FRAGS}"
 
@@ -121,3 +121,4 @@ do_install:prepend:ccmp2() {
             install -m 0644 "${B}/arch/${ARCH}/boot/dts/digi/${dtbf}" "${B}/arch/${ARCH}/boot/dts/"
         done
     fi
+}
